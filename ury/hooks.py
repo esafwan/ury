@@ -18,7 +18,9 @@ app_include_js = [
     "/assets/ury/js/quick_entry.js",
     "/assets/ury/js/pos_print.js",
     "/assets/ury/js/restrict_qty_edit_pos.js",
-    "/assets/ury/js/ury_pos_kot.js"
+    "/assets/ury/js/ury_pos_kot.js",
+    "/assets/grillax/js/pos_opening.js",
+
 ]
 
 # include js, css files in header of web template
@@ -127,6 +129,19 @@ doc_events = {
         "on_trash": "ury.ury.hooks.ury_pos_invoice.on_trash",
     },
     "POS Profile": {"validate": "ury.ury.hooks.ury_pos_profile.validate"},
+
+    "POS Opening Entry": {
+        "validate": "grillax.grillax.hooks.pos_opening.validate_pos_opening",
+        "before_save": "grillax.grillax.hooks.pos_opening.update_daily_checklists",
+        "on_submit":"grillax.grillax.hooks.pos_opening.create_shift_open"
+    },
+    "POS Closing Entry": {
+        "before_save":"grillax.grillax.hooks.pos_closing.validate_current_time",
+        "validate": "grillax.grillax.hooks.pos_closing.validate_daily_checklists",
+        "on_submit": ["grillax.grillax.hooks.pos_closing.payment_reconciliation",
+        "grillax.grillax.hooks.pos_closing.create_shift_closing"]
+    },
+
     "Sales Invoice": {
         "before_insert": "ury.ury.hooks.ury_sales_invoice.before_insert",
         "on_update":"ury.ury.hooks.ury_sales_invoice.on_update",
@@ -354,7 +369,9 @@ fixtures = [
                     "POS Profile-custom_table_order_printer",
                     "POS Profile-custom_reprint_kot_format",
                     "Employee-payment_amount",
-                    "Employee-payment_type"
+                    "Employee-payment_type",
+                    "POS Profile-custom_dependent_checklist"
+
                 },
             ]
         ],

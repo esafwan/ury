@@ -104,10 +104,52 @@ Create and modify customer orders with item selection, quantity adjustment, spec
 View and manage orders across different statuses (Draft, Unbilled, Paid, Consolidated, Cancelled). Search and filter orders by customer, invoice number, or mobile number. Supports order editing, cancellation with reason tracking, and payment processing.
 
 ### Past Order Search
-**Location:** Backend → POS Extend API  
+**Location:** Backend → POS Extend API, Frontend → ERPNext POS  
 **Dependencies:** POS Invoice  
 **Description:**  
-Search historical orders by customer name or invoice number with input validation and security controls. Enables quick retrieval of past transactions for customer service, refunds, or order verification purposes.
+Search historical orders by customer name or invoice number with input validation and security controls. Enables quick retrieval of past transactions for customer service, refunds, or order verification purposes. Includes filtering by invoice status (Draft, To Bill) and room-based filtering for captains.
+
+### ERPNext POS Integration & Extensions
+**Location:** Frontend → ERPNext POS Interface  
+**Dependencies:** ERPNext POS, Client Scripts  
+**Description:**  
+Extended ERPNext POS interface with URY-specific enhancements including order cancellation with reason tracking, order editing restrictions for billed table orders, comment management, discount application, and custom invoice display with table information. Provides seamless integration between ERPNext's standard POS and URY's restaurant-specific features.
+
+### Customer Quick Entry
+**Location:** Frontend → Customer Selection  
+**Dependencies:** ERPNext Customer  
+**Description:**  
+Simplified customer creation form for quick entry during order taking. Streamlined fields focusing on customer name and mobile number, with automatic mobile number population when numeric input is detected. Hides unnecessary fields for faster customer onboarding.
+
+### Quantity Edit Restrictions
+**Location:** Frontend → POS Invoice Form  
+**Dependencies:** POS Profile, POS Invoice  
+**Description:**  
+Restrict quantity editing for billed table orders and disable UOM/warehouse field editing in POS interface. Prevents accidental modifications to completed orders and maintains data integrity for accounting and reporting purposes.
+
+### KOT Auto-Generation on Save
+**Location:** Frontend → POS Invoice Form  
+**Dependencies:** URY KOT Generate API  
+**Description:**  
+Automatically generate or update KOTs when POS Invoice is saved, comparing current items with previous items to create appropriate KOT types (New Order, Order Modified). Ensures kitchen always receives updated order information when orders are modified in ERPNext POS interface.
+
+### Invoice Print Handling
+**Location:** Frontend → POS Invoice Form  
+**Dependencies:** QZ Tray, Network Printers, Print API  
+**Description:**  
+Comprehensive invoice printing system supporting QZ Tray, network printers, and browser-based printing. Automatically updates invoice printed status and table occupancy when printing completes. Includes error handling and connection management for reliable printing operations.
+
+### Item Add-Ons & Variants
+**Location:** ERPNext Desk → Item → POS Variants Tab  
+**Dependencies:** ERPNext Item, Item Add On, POS Item Variants  
+**Description:**  
+Configure item add-ons (complementary items) and POS-specific variants for menu items. Enables upselling opportunities and item customization options directly from the item master, separate from ERPNext's standard variant system.
+
+### Customer Mobile Number Handling
+**Location:** Frontend → Customer Quick Entry  
+**Dependencies:** ERPNext Customer, Client Scripts  
+**Description:**  
+Smart customer creation that automatically populates mobile number field when numeric input is entered in customer name field. Simplifies customer entry process for walk-in customers and improves data consistency.
 
 ### Customer Management
 **Location:** Frontend → POS Application, ERPNext Desk  
@@ -245,7 +287,7 @@ Create POS Invoices automatically when orders are placed, linked to ERPNext acco
 **Location:** Frontend → Payment Dialog  
 **Dependencies:** POS Invoice, Mode of Payment  
 **Description:**  
-Process payments with support for multiple payment methods, split payments, and partial payments. Calculates totals, taxes, and change amounts, with integration to ERPNext payment modes and accounting entries.
+Process payments with support for multiple payment methods in a single transaction (e.g., part cash, part card). Calculates totals, taxes, and change amounts, with integration to ERPNext payment modes and accounting entries. Note: This is split payment method, not split billing - a single invoice can be paid using multiple payment methods.
 
 ### Discount Management
 **Location:** Frontend → Payment Dialog, POS Profile  
@@ -511,13 +553,13 @@ Option to prevent takeaway order KOTs from printing at specific production units
 **Location:** ERPNext Desk → Branch → Aggregator Settings  
 **Dependencies:** ERPNext Customer, Price List, Mode of Payment  
 **Description:**  
-Configure integration with food delivery aggregator platforms (Swiggy, Zomato, etc.). Set up dedicated customers, price lists, and payment methods for each platform with optional tax exclusion.
+Configure manual tracking for food delivery aggregator platforms (Swiggy, Zomato, etc.). Set up dedicated customers, price lists, and payment methods for each platform with optional tax exclusion. Note: This is manual tracking only - there is no automated API integration with aggregator platforms.
 
 ### Aggregator Order Processing
 **Location:** Frontend → POS Application → Aggregator Order Type  
 **Dependencies:** Aggregator Settings, POS Invoice  
 **Description:**  
-Process orders from aggregator platforms with platform-specific pricing and menu display. Automatically applies aggregator customer, price list, and payment method settings.
+Manually process orders from aggregator platforms by selecting the aggregator order type. Applies platform-specific pricing and menu display based on configured aggregator settings. Orders must be manually entered into the system.
 
 ### Aggregator Invoice Series
 **Location:** ERPNext Desk → URY Restaurant  
@@ -529,7 +571,7 @@ Dedicated invoice numbering series for aggregator orders, enabling easy identifi
 **Location:** Backend → POS Invoice  
 **Dependencies:** POS Invoice  
 **Description:**  
-Store aggregator-provided order IDs with invoices for order tracking and reconciliation. Links URY orders with external platform orders for complete order lifecycle management.
+Manually store aggregator-provided order IDs with invoices for order tracking and reconciliation. This field allows manual entry of external platform order IDs for reference purposes.
 
 ### Aggregator Tax Configuration
 **Location:** ERPNext Desk → Branch → Aggregator Settings  
@@ -579,6 +621,112 @@ Restrict access to specific POS Profiles and Branches using ERPNext User Permiss
 
 ---
 
+## Recommended Feature Enhancements
+
+Based on analysis of modern restaurant management systems and industry best practices, here are top feature suggestions to bring URY in line with contemporary applications:
+
+### 1. **Real-Time Order Tracking Dashboard**
+**Priority:** High  
+**Description:**  
+Live dashboard showing all active orders, table status, kitchen queue, and service times in real-time. Visual indicators for orders approaching SLA, delayed KOTs, and bottleneck identification. Enables managers to proactively manage operations and improve service speed.
+
+### 2. **Mobile App for Waitstaff**
+**Priority:** High  
+**Description:**  
+Native mobile application (iOS/Android) for waitstaff to take orders tableside, update order status, process payments, and communicate with kitchen. Reduces order errors, improves service speed, and enables tableside payment processing.
+
+### 3. **Customer Loyalty & Rewards Program**
+**Priority:** High  
+**Description:**  
+Integrated loyalty program with points accumulation, tiered membership levels, and automated reward redemption. Track customer visit frequency, spending patterns, and offer personalized promotions. Increases customer retention and repeat visits.
+
+### 4. **Online Ordering & Reservation System**
+**Priority:** High  
+**Description:**  
+Customer-facing web portal and mobile app for placing orders online, making reservations, and pre-ordering. Integration with POS for seamless order flow, table management, and payment processing. Expands revenue channels beyond dine-in.
+
+### 5. **Advanced Inventory Management**
+**Priority:** Medium  
+**Description:**  
+Real-time inventory tracking with low-stock alerts, automatic reorder points, waste tracking, and recipe-based consumption calculation. Integration with suppliers for automated purchase orders. Reduces food waste and ensures ingredient availability.
+
+### 6. **Staff Scheduling & Shift Management**
+**Priority:** Medium  
+**Description:**  
+Automated staff scheduling based on sales forecasts, shift swapping, time tracking, and attendance management. Integration with payroll for accurate wage calculation. Optimizes labor costs and ensures adequate staffing.
+
+### 7. **Customer Feedback & Review Management**
+**Priority:** Medium  
+**Description:**  
+Post-dining feedback collection via SMS/email, review aggregation from multiple platforms, sentiment analysis, and response management. Helps improve service quality and manage online reputation.
+
+### 8. **Dynamic Pricing & Promotions Engine**
+**Priority:** Medium  
+**Description:**  
+Time-based pricing (happy hours, peak pricing), combo deals, flash sales, and personalized promotions based on customer history. Automated discount application and promotion tracking. Maximizes revenue during slow periods.
+
+### 9. **Advanced Analytics & Business Intelligence**
+**Priority:** Medium  
+**Description:**  
+Predictive analytics for sales forecasting, menu item performance prediction, customer lifetime value calculation, and profitability analysis by item/category/time. Data visualization dashboards for quick insights. Enables data-driven decision making.
+
+### 10. **Multi-Location & Franchise Management**
+**Priority:** Medium  
+**Description:**  
+Centralized management for multiple restaurant locations with consolidated reporting, standardized menu management, and location-specific configurations. Enables franchise operations with consistent operations across outlets.
+
+### 11. **Delivery Management & Driver Tracking**
+**Priority:** Medium  
+**Description:**  
+Delivery order assignment, driver tracking via GPS, delivery time estimation, and delivery status updates for customers. Integration with third-party delivery services or in-house delivery fleet management.
+
+### 12. **Table Reservation & Waitlist Management**
+**Priority:** Medium  
+**Description:**  
+Online table reservation system with availability calendar, automatic waitlist management, SMS/email confirmations, and no-show tracking. Optimizes table utilization and improves customer experience.
+
+### 13. **Recipe Costing & Menu Engineering**
+**Priority:** Low  
+**Description:**  
+Detailed recipe costing with ingredient-level cost tracking, menu engineering analysis (star, plowhorse, puzzle, dog categorization), and profitability optimization suggestions. Helps optimize menu for maximum profitability.
+
+### 14. **Compliance & Food Safety Management**
+**Priority:** Low  
+**Description:**  
+Food safety checklist management, temperature logging, expiration date tracking, and compliance reporting. Integration with health department requirements and audit trail maintenance.
+
+### 15. **Social Media Integration**
+**Priority:** Low  
+**Description:**  
+Social media posting automation, Instagram/Facebook menu integration, social media order placement, and social engagement tracking. Expands marketing reach and enables social commerce.
+
+### 16. **Gift Card & Voucher Management**
+**Priority:** Low  
+**Description:**  
+Digital and physical gift card issuance, redemption tracking, balance management, and promotional voucher campaigns. Increases cash flow and customer acquisition.
+
+### 17. **Event & Catering Management**
+**Priority:** Low  
+**Description:**  
+Catering order management, event planning tools, equipment tracking, and large party coordination. Expands revenue opportunities beyond regular dining operations.
+
+### 18. **Supplier Management & Procurement**
+**Priority:** Low  
+**Description:**  
+Supplier catalog management, automated purchase order generation, price comparison, and supplier performance tracking. Streamlines procurement process and reduces costs.
+
+### 19. **Multi-Language & Multi-Currency Support**
+**Priority:** Low  
+**Description:**  
+Full system localization with multiple language support for POS, KDS, and customer-facing interfaces. Multi-currency support for international operations. Enables global expansion.
+
+### 20. **API Integration Hub**
+**Priority:** Low  
+**Description:**  
+RESTful API for third-party integrations with accounting software, marketing platforms, delivery services, and payment gateways. Webhook support for real-time event notifications. Enables ecosystem expansion.
+
+---
+
 ## File Tracking
 
 ### Files Analyzed
@@ -601,11 +749,41 @@ Restrict access to specific POS Profiles and Branches using ERPNext User Permiss
 - `/INSTALLATION.md` - Installation guide
 - `/SETUP.md` - Setup instructions
 
-### Files Pending Review
-- Custom scripts and client-side JavaScript files in `/ury/public/js/`
-- Print format templates
-- Custom fields and property setters in fixtures
-- Test files (for understanding edge cases)
+### Files Analyzed (Complete)
+
+#### Client-Side Scripts ✅
+- ✅ `/ury/public/js/pos_extend.js` - ERPNext POS extensions and customizations
+- ✅ `/ury/public/js/pos_print.js` - Invoice printing handlers (QZ, network, browser)
+- ✅ `/ury/public/js/quick_entry.js` - Customer quick entry form customization
+- ✅ `/ury/public/js/qz-tray.js` - QZ Tray integration library (external)
+- ✅ `/ury/public/js/restrict_qty_edit_pos.js` - Quantity edit restrictions
+- ✅ `/ury/public/js/sign-message.js` - QZ certificate signing
+- ✅ `/ury/public/js/ury_pos_kot.js` - KOT auto-generation on invoice save
+- ✅ `/ury/public/js/jsrsasign-all-min.js` - Cryptographic library (external)
+
+#### Doctype Client Scripts ✅
+- ✅ All `.js` files in doctype directories analyzed for client-side behaviors
+
+#### Fixtures ✅
+- ✅ `/ury/fixtures/custom_field.json` - Custom field definitions (Item add-ons, variants, Branch aggregators, POS Profile extensions)
+- ✅ `/ury/fixtures/client_script.json` - Client script configurations
+- ✅ `/ury/fixtures/property_setter.json` - Property setters for ERPNext doctypes
+- ✅ `/ury/fixtures/custom_html_block.json` - Custom HTML blocks
+- ✅ `/ury/fixtures/role.json` - Role definitions
+
+#### ERPNext Extensions ✅
+- ✅ `/ury/ury/custom/item.json` - Item doctype customizations (POS variants, add-ons)
+- ✅ Customizations to POS Profile, POS Invoice, Branch doctypes
+
+#### Web Pages ✅
+- ✅ `/ury/www/pos.py` - POS web page handler and context provider
+
+#### Print Formats ✅
+- ✅ `/ury/ury/doctype/ury_daily_p_and_l/profit_loss_details.html` - P&L print template
+
+### Files Pending Review (Optional)
+- Test files (for understanding edge cases and validation rules)
+- Additional print format templates in ERPNext (if any)
 
 ---
 

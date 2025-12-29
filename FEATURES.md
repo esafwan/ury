@@ -18,6 +18,10 @@ This document provides a comprehensive overview of all features in the URY Resta
 10. [Printing & Hardware Integration](#printing--hardware-integration)
 11. [Aggregator Integration](#aggregator-integration)
 12. [User Management & Permissions](#user-management--permissions)
+13. [Recommended Feature Enhancements](#recommended-feature-enhancements)
+14. [Planned Innovations & Roadmap](#planned-innovations--roadmap)
+15. [File Tracking](#file-tracking)
+16. [Dependencies Summary](#dependencies-summary)
 
 ---
 
@@ -727,6 +731,72 @@ RESTful API for third-party integrations with accounting software, marketing pla
 
 ---
 
+## Planned Innovations & Roadmap
+
+URY is continuously evolving to incorporate cutting-edge technology and improve user experience. The following innovations are planned for future releases:
+
+### HUF AI Agent Integration
+**Status:** Planned  
+**Priority:** High  
+**Description:**  
+Integration with HUF, an advanced AI Agent framework for Frappe systems that supports multiple AI models and provides flexible integration capabilities. This integration will enable intelligent automation across the restaurant management system through multiple interaction modes:
+
+- **Event-Based Automation:** AI agents that react to key operational events (e.g., POS closing, order delays, inventory alerts) with intelligent responses and automated actions
+- **Scheduled Intelligence:** Background agents that run on schedule to enforce policies, track metrics, analyze trends, and generate insights
+- **Webhook Integration:** AI-powered webhook handlers that process external events and trigger appropriate system responses
+- **Chat-Based Assistance:** Conversational AI interface for staff to query data, get recommendations, and perform actions through natural language
+- **Smart Functions:** AI-enhanced functions that provide intelligent suggestions, automate decision-making, and optimize operations
+
+This integration will transform URY into an intelligent restaurant management system that learns from operations, predicts needs, and automates routine tasks while maintaining human oversight.
+
+### AI-Powered User Onboarding
+**Status:** Planned  
+**Priority:** High  
+**Description:**  
+Revolutionary self-service onboarding system powered by AI that eliminates the need for consultants and technical expertise. The system will guide new restaurant owners through:
+
+- **Intelligent Setup Wizard:** Step-by-step configuration guided by AI that understands restaurant type, size, and operational model
+- **Automated Data Import:** AI-assisted data uploading and cleanup that validates, normalizes, and organizes menu items, recipes, pricing, and inventory data
+- **Smart Configuration:** AI recommendations for POS settings, printer configurations, room layouts, and operational workflows based on restaurant profile
+- **Data Quality Assurance:** Automated data validation, duplicate detection, and cleanup suggestions to ensure accurate setup
+- **Contextual Help:** AI-powered help system that provides relevant guidance based on current setup stage and user actions
+
+This innovation will dramatically reduce onboarding time from days/weeks to hours, making URY accessible to restaurants without technical resources or consultant budgets.
+
+### Custom SaaS Frontend Platform
+**Status:** Planned  
+**Priority:** Medium  
+**Description:**  
+A fully custom-designed SaaS frontend platform connected to Frappe Cloud infrastructure, providing complete UX ownership and brand control. This platform will offer:
+
+- **Branded Experience:** Fully customizable user interface that reflects restaurant brand identity, colors, and design language
+- **Modern UX/UI:** Contemporary design patterns, intuitive navigation, and optimized user flows crafted specifically for restaurant operations
+- **Mobile-First Design:** Responsive design optimized for tablets, smartphones, and desktop devices used in restaurant environments
+- **Performance Optimization:** Lightweight, fast-loading interface optimized for restaurant operations with offline capability
+- **Frappe Cloud Integration:** Seamless backend integration with Frappe Cloud for reliable, scalable infrastructure without managing servers
+- **White-Label Capability:** Complete customization options for multi-tenant SaaS deployment with brand-specific experiences
+
+This platform will provide restaurants with a modern, branded experience while leveraging the robust backend infrastructure of Frappe Cloud, combining the best of custom UX design with enterprise-grade reliability.
+
+### Additional Planned Enhancements
+
+#### Intelligent Menu Optimization
+AI-powered menu analysis that suggests pricing adjustments, identifies underperforming items, recommends new dishes based on trends, and optimizes menu layout for maximum profitability.
+
+#### Predictive Analytics & Forecasting
+Advanced machine learning models that predict daily sales, optimize inventory ordering, forecast staffing needs, and identify seasonal patterns to improve operational efficiency.
+
+#### Voice-Activated Operations
+Voice commands for order taking, status updates, and system navigation, enabling hands-free operation in busy kitchen and service environments.
+
+#### Automated Compliance & Reporting
+AI agents that automatically generate compliance reports, track regulatory requirements, and ensure adherence to food safety and labor regulations.
+
+#### Smart Inventory Management
+AI-powered inventory optimization that predicts ingredient needs, suggests optimal ordering quantities, tracks waste patterns, and automates supplier ordering.
+
+---
+
 ## File Tracking
 
 ### Files Analyzed
@@ -813,8 +883,10 @@ RESTful API for third-party integrations with accounting software, marketing pla
 - Integration points with ERPNext are extensive - refer to ERPNext documentation for base functionality
 - Frontend applications (POS v2, POS v1, KDS) share backend APIs but have different user interfaces
 - Legacy POS (urypos) and KDS (URYMosaic) are maintained for backward compatibility until December 2025
+- Planned innovations represent future roadmap items and are subject to change based on development priorities and user feedback
 
 ---
 
 *Last Updated: Based on current codebase analysis*  
-*For technical implementation details, refer to source code and inline documentation*
+*For technical implementation details, refer to source code and inline documentation*  
+*For roadmap and planned features, see "Planned Innovations & Roadmap" section*

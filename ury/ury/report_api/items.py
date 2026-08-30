@@ -141,17 +141,17 @@ def get_item_wise_purchase_history(start_date, end_date, branch=None, page=1, pa
 	offset = (page - 1) * page_size
 
 	params = {"start_date": start_date, "end_date": end_date, "limit": page_size, "offset": offset}
-	branch_filter = ""
-	if branch:
-		params["branch"] = branch
-		branch_filter = "AND a.`branch` = %(branch)s"
 
-	base_sql = f"""
+	# `branch` is accepted (the reports frontend sends the active branch on every
+	# report request) but deliberately ignored: purchasing here is standard
+	# ERPNext, and `Purchase Invoice` has no `branch` field - neither in core nor
+	# added by URY custom_field fixtures. Filtering on it raised a hard SQL error
+	# (Unknown column 'a.branch'). Purchase data is company-wide.
+	base_sql = """
 		FROM `tabPurchase Invoice` a
 		INNER JOIN `tabPurchase Invoice Item` b ON a.`name` = b.`parent`
 		WHERE a.`docstatus` = 1
 			AND a.`posting_date` BETWEEN %(start_date)s AND %(end_date)s
-			{branch_filter}
 		GROUP BY b.`item_code`
 	"""
 
@@ -190,7 +190,8 @@ def get_item_wise_purchase_history(start_date, end_date, branch=None, page=1, pa
 		r["amount"] = r["amount"] or 0
 
 	return {
-		"branch": branch,
+		# Always None: this report is company-wide, never branch-scoped.
+		"branch": None,
 		"start_date": str(start_date),
 		"end_date": str(end_date),
 		"items": rows,

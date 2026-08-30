@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useBranchContext } from '../../context/BranchContext';
-import { RefreshCw, Plus, Store } from 'lucide-react';
-import { Card, Button, Input, Spinner, showToast } from '@ury/ui';
+import { Plus } from 'lucide-react';
+import { Page, Section, Card, Button, Input, Spinner, showToast } from '@ury/ui';
 import { call } from '@ury/core';
 
 interface AggregatorSetting {
@@ -13,7 +13,7 @@ interface AggregatorSetting {
 }
 
 export const AggregatorPage: React.FC = () => {
-  const { activeBranchId, activeBranch, branches } = useBranchContext();
+  const { activeBranchId, branches } = useBranchContext();
   const [aggregators, setAggregators] = useState<AggregatorSetting[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   
@@ -133,11 +133,11 @@ export const AggregatorPage: React.FC = () => {
   const hasBranch = branches.length > 0;
 
   return (
-    <div className="space-y-6">
+    <Page>
       {/* Toolbar & Filters */}
-      <Card className="p-4 rounded-lg border border-gray-200 bg-white shadow-xs">
+      <div className="p-4 rounded-[9px] border border-hair bg-card">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="font-semibold text-gray-700">Aggregator Settings</div>
+          <div className="font-semibold text-muted-foreground">Aggregator Settings</div>
           <div className="flex items-center space-x-3 w-full md:w-auto">
             <Button
               onClick={() => setIsDialogOpen(true)}
@@ -149,78 +149,76 @@ export const AggregatorPage: React.FC = () => {
             </Button>
           </div>
         </div>
-      </Card>
+      </div>
 
-      {/* List View */}
-      {loading ? (
-        <div className="py-16 flex items-center justify-center bg-white rounded-lg border border-gray-200">
+      <Section>
+        {/* List View */}
+        {loading ? (
+        <div className="py-16 flex items-center justify-center bg-card rounded-[9px] border border-hair">
           <Spinner className="w-8 h-8 text-primary" />
         </div>
       ) : aggregators.length === 0 ? (
-        <Card className="p-12 flex flex-col items-center justify-center text-center rounded-lg border border-gray-200 shadow-sm bg-white">
-          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-            <Store className="w-6 h-6 text-primary" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">No Aggregators Found</h3>
-          <p className="text-gray-500 mb-6 max-w-sm">
-            Add aggregators like Zomato, Swiggy to automatically create customer, pricelist, and payment modes.
-          </p>
+        <div className="px-4 py-[18px] text-xs text-text-tertiary flex items-center gap-2.5 bg-card border border-hair rounded-[9px]">
+          <span>Add aggregators like Zomato, Swiggy to automatically create customer, pricelist, and payment modes.</span>
           <Button
             onClick={() => setIsDialogOpen(true)}
-            className="bg-primary hover:bg-primary/90 text-white font-semibold flex items-center space-x-1.5 shadow-xs"
+            variant="chrome"
+            size="compactSm"
             disabled={!hasBranch}
+            className="ml-auto"
           >
-            <Plus className="w-4 h-4" />
-            <span>Add Aggregator</span>
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add</span>
           </Button>
-        </Card>
+        </div>
       ) : (
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-          <table className="w-full text-left text-sm text-gray-600">
-            <thead className="bg-gray-50 border-b border-gray-100 text-xs text-gray-500 font-semibold">
+        <div className="bg-card border border-hair rounded-[9px] overflow-hidden">
+          <table className="w-full text-left text-sm text-muted-foreground">
+            <thead className="border-b border-hair">
               <tr>
-                <th className="px-6 py-4">Aggregator</th>
-                <th className="px-6 py-4">Customer</th>
-                <th className="px-6 py-4">Price List</th>
-                <th className="px-6 py-4">Mode of Payment</th>
+                <th className="px-[14px] py-[7px] text-[11px] font-medium text-text-tertiary text-left">Aggregator</th>
+                <th className="px-[14px] py-[7px] text-[11px] font-medium text-text-tertiary text-left">Customer</th>
+                <th className="px-[14px] py-[7px] text-[11px] font-medium text-text-tertiary text-left">Price List</th>
+                <th className="px-[14px] py-[7px] text-[11px] font-medium text-text-tertiary text-left">Mode of Payment</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-hair">
               {aggregators.map((item, idx) => (
-                <tr key={idx} className="hover:bg-primary/10 transition-colors">
-                  <td className="px-6 py-4 font-semibold text-gray-900">{item.aggregator}</td>
-                  <td className="px-6 py-4">{item.customer}</td>
-                  <td className="px-6 py-4">{item.price_list}</td>
-                  <td className="px-6 py-4">{item.mode_of_payment}</td>
+                <tr key={idx} className="hover:bg-muted transition-colors">
+                  <td className="px-[14px] py-2 text-[12.5px] font-semibold text-foreground">{item.aggregator}</td>
+                  <td className="px-[14px] py-2 text-[12.5px]">{item.customer}</td>
+                  <td className="px-[14px] py-2 text-[12.5px]">{item.price_list}</td>
+                  <td className="px-[14px] py-2 text-[12.5px]">{item.mode_of_payment}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      )}
+        )}
+      </Section>
 
       {/* Add Modal */}
       {isDialogOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <Card className="w-full max-w-md bg-white rounded-lg shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900">Add Aggregator</h2>
+          <Card className="w-full max-w-md bg-card rounded-lg shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+              <h2 className="text-lg font-bold text-foreground">Add Aggregator</h2>
             </div>
             <form onSubmit={handleCreateAggregator} className="p-6 space-y-4 text-sm">
               <div>
-                <label className="block font-semibold text-gray-700 mb-1">Aggregator Name</label>
+                <label className="block font-semibold text-muted-foreground mb-1">Aggregator Name</label>
                 <Input
                   placeholder="Zomato"
                   value={newAggregatorName}
                   onChange={(e) => setNewAggregatorName(e.target.value)}
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-text-tertiary mt-1">
                   This will automatically create a Customer, Price List, and Mode of Payment with this name.
                 </p>
               </div>
               
-              <div className="pt-6 flex justify-end gap-2 border-t mt-4 border-gray-100">
+              <div className="pt-6 flex justify-end gap-2 border-t mt-4 border-border">
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
                 </Button>
@@ -232,7 +230,7 @@ export const AggregatorPage: React.FC = () => {
           </Card>
         </div>
       )}
-    </div>
+    </Page>
   );
 };
 

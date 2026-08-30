@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { call } from '@ury/core';
-import { StatCard, DataTable, type DataTableColumn } from '@ury/ui';
-import { Factory, Package } from 'lucide-react';
+import { KpiStrip, DataTable, type DataTableColumn, Page, Section } from '@ury/ui';
 import { DateRangeFilter, type DateRangeValue } from '../../components/reports/DateRangeFilter';
 import { toApiDate } from '../../lib/reportDate';
 import { subMonths, endOfDay, format } from 'date-fns';
@@ -63,7 +62,7 @@ const formatDate = (d: Date) => format(d, 'MMM d, yyyy');  const emptyMessage = 
   }, [fetchData]);
 
   return (
-    <div className="space-y-6">
+    <Page>
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-semibold">Completed Work Orders</h1>
@@ -73,24 +72,32 @@ const formatDate = (d: Date) => format(d, 'MMM d, yyyy');  const emptyMessage = 
       </div>
 
       {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
+        <Section>
+          <div className="rounded-md border border-destructive-tint-border bg-destructive-tint px-4 py-3 text-sm text-destructive">
+            {error}
+          </div>
+        </Section>
       )}
 
       {data && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <StatCard label="Completed" value={data.summary.total_completed} icon={<Factory className="w-4 h-4" />} />
-          <StatCard label="Qty Produced" value={data.summary.total_qty_produced} icon={<Package className="w-4 h-4" />} />
-        </div>
+        <Section>
+          <KpiStrip
+            items={[
+              { label: 'Completed', value: data.summary.total_completed },
+              { label: 'Qty Produced', value: data.summary.total_qty_produced },
+            ]}
+          />
+        </Section>
       )}
 
-      <DataTable
-        columns={columns}
-        rows={data?.work_orders ?? []}
-        isLoading={isLoading}
-        emptyMessage={emptyMessage}
-      />
-    </div>
+      <Section>
+        <DataTable
+          columns={columns}
+          rows={data?.work_orders ?? []}
+          isLoading={isLoading}
+          emptyMessage={emptyMessage}
+        />
+      </Section>
+    </Page>
   );
 }

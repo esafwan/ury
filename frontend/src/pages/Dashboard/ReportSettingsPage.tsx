@@ -10,7 +10,7 @@ import {
   Calculator,
   FileSpreadsheet
 } from 'lucide-react';
-import { Button, Input, Select, SelectItem, Card, Spinner, showToast } from '@ury/ui';
+import { Button, Input, Page, Select, SelectItem, Card, Section, Spinner, showToast } from '@ury/ui';
 import { call } from '@ury/core';
 import { useBranchContext } from '../../context/BranchContext';
 
@@ -321,7 +321,7 @@ export const ReportSettingsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="py-16 flex items-center justify-center bg-white rounded-lg border border-gray-200">
+      <div className="py-16 flex items-center justify-center bg-card rounded-lg border border-border">
         <Spinner className="w-8 h-8 text-primary" />
       </div>
     );
@@ -330,17 +330,16 @@ export const ReportSettingsPage: React.FC = () => {
   const branchLabel = activeBranchId === 'all' ? 'All Branches' : (activeBranch?.name || 'Selected Branch');
 
   return (
-    <div className="min-h-screen bg-gray-50/50">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-xl border border-gray-200 shadow-xs">
+    <Page>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card p-6 rounded-xl border border-border shadow-xs">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-semibold shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-primary-tint text-primary flex items-center justify-center font-semibold shrink-0">
               <FileSpreadsheet className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">URY Report Settings</h1>
-              <p className="text-sm text-gray-500">Configure financial parameters, overhead cost basis, and operational shifts for <span className="font-semibold text-primary">{branchLabel}</span></p>
+              <h1 className="text-2xl font-bold text-foreground tracking-tight">URY Report Settings</h1>
+              <p className="text-sm text-text-tertiary">Configure financial parameters, overhead cost basis, and operational shifts for <span className="font-semibold text-primary">{branchLabel}</span></p>
             </div>
           </div>
           <Button
@@ -351,40 +350,40 @@ export const ReportSettingsPage: React.FC = () => {
             {saving ? <Spinner className="w-4 h-4" /> : <Save className="w-4 h-4" />}
             Save Report Settings
           </Button>
-        </div>
+      </div>
 
-        {/* Expandable Accordion Cards Container */}
-        <div className="space-y-6">
+      {/* Expandable Accordion Cards Container */}
 
-          {/* Accordion 1: Business Hours */}
-          <Card className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-xs">
+      {/* Accordion 1: Business Hours */}
+      <Section>
+        <Card className="rounded-xl border border-border bg-card overflow-hidden shadow-xs">
             <button
               onClick={() => toggleSection('businessHours')}
-              className="w-full px-6 py-4 bg-white flex items-center justify-between border-b border-gray-100 hover:bg-gray-50/80 transition-colors text-left"
+              className="w-full px-6 py-4 bg-card flex items-center justify-between border-b border-border hover:bg-muted transition-colors text-left"
             >
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-purple-50 text-primary flex items-center justify-center">
+                <div className="w-9 h-9 rounded-lg bg-primary-tint text-primary flex items-center justify-center">
                   <Clock className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900">1. Business Hours & Shift Cutoffs</h2>
-                  <p className="text-xs text-gray-500">Extended operating hours and reporting cut-off time offsets.</p>
+                  <h2 className="text-lg font-bold text-foreground">1. Business Hours & Shift Cutoffs</h2>
+                  <p className="text-xs text-text-tertiary">Extended operating hours and reporting cut-off time offsets.</p>
                 </div>
               </div>
               {openSections.businessHours ? (
-                <ChevronUp className="w-5 h-5 text-gray-400" />
+                <ChevronUp className="w-5 h-5 text-text-tertiary" />
               ) : (
-                <ChevronDown className="w-5 h-5 text-gray-400" />
+                <ChevronDown className="w-5 h-5 text-text-tertiary" />
               )}
             </button>
 
             {openSections.businessHours && (
-              <div className="p-6 space-y-6 bg-white">
+              <div className="p-6 space-y-6 bg-card">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
+                  <div className="flex items-center justify-between p-4 bg-muted rounded-xl border border-border">
                     <div>
-                      <span className="text-sm font-semibold text-gray-900 block">Extended Hours</span>
-                      <span className="text-xs text-gray-500">Enable shift calculation beyond midnight (00:00).</span>
+                      <span className="text-sm font-semibold text-foreground block">Extended Hours</span>
+                      <span className="text-xs text-text-tertiary">Enable shift calculation beyond midnight (00:00).</span>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
@@ -393,12 +392,12 @@ export const ReportSettingsPage: React.FC = () => {
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setExtendedHours(e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                      <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                     </label>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                       Hours Offset (hours)
                     </label>
                     <Input
@@ -407,42 +406,44 @@ export const ReportSettingsPage: React.FC = () => {
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setHoursOffset(Number(e.target.value))}
                       placeholder="e.g. 4 for 4:00 AM cutoff"
                     />
-                    <span className="text-xs text-gray-500 mt-1 block">
+                    <span className="text-xs text-text-tertiary mt-1 block">
                       Sales before this offset hour will be attributed to the previous business date.
                     </span>
                   </div>
                 </div>
               </div>
             )}
-          </Card>
+        </Card>
+      </Section>
 
-          {/* Accordion 2: Cost Configuration */}
-          <Card className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-xs">
+      {/* Accordion 2: Cost Configuration */}
+      <Section>
+        <Card className="rounded-xl border border-border bg-card overflow-hidden shadow-xs">
             <button
               onClick={() => toggleSection('costConfig')}
-              className="w-full px-6 py-4 bg-white flex items-center justify-between border-b border-gray-100 hover:bg-gray-50/80 transition-colors text-left"
+              className="w-full px-6 py-4 bg-card flex items-center justify-between border-b border-border hover:bg-muted transition-colors text-left"
             >
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                <div className="w-9 h-9 rounded-lg bg-primary-tint text-primary flex items-center justify-center">
                   <Calculator className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900">2. Cost Configuration</h2>
-                  <p className="text-xs text-gray-500">Buying price lists, asset depreciation rates, and utility overhead allocations.</p>
+                  <h2 className="text-lg font-bold text-foreground">2. Cost Configuration</h2>
+                  <p className="text-xs text-text-tertiary">Buying price lists, asset depreciation rates, and utility overhead allocations.</p>
                 </div>
               </div>
               {openSections.costConfig ? (
-                <ChevronUp className="w-5 h-5 text-gray-400" />
+                <ChevronUp className="w-5 h-5 text-text-tertiary" />
               ) : (
-                <ChevronDown className="w-5 h-5 text-gray-400" />
+                <ChevronDown className="w-5 h-5 text-text-tertiary" />
               )}
             </button>
 
             {openSections.costConfig && (
-              <div className="p-6 space-y-6 bg-white">
+              <div className="p-6 space-y-6 bg-card">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                       Buying Price List
                     </label>
                     <Select value={buyingPriceList} onValueChange={(val: string) => setBuyingPriceList(val)}>
@@ -453,7 +454,7 @@ export const ReportSettingsPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                       Depreciation Rate (%)
                     </label>
                     <Input
@@ -465,7 +466,7 @@ export const ReportSettingsPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                       Electricity Charges ($ / month)
                     </label>
                     <Input
@@ -477,57 +478,59 @@ export const ReportSettingsPage: React.FC = () => {
                 </div>
               </div>
             )}
-          </Card>
+        </Card>
+      </Section>
 
-          {/* Accordion 3: Expenses Repeatable Tables */}
-          <Card className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-xs">
+      {/* Accordion 3: Expenses Repeatable Tables */}
+      <Section>
+        <Card className="rounded-xl border border-border bg-card overflow-hidden shadow-xs">
             <button
               onClick={() => toggleSection('expenses')}
-              className="w-full px-6 py-4 bg-white flex items-center justify-between border-b border-gray-100 hover:bg-gray-50/80 transition-colors text-left"
+              className="w-full px-6 py-4 bg-card flex items-center justify-between border-b border-border hover:bg-muted transition-colors text-left"
             >
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <div className="w-9 h-9 rounded-lg bg-success-tint text-success flex items-center justify-center">
                   <Receipt className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900">3. Expenses Tables</h2>
-                  <p className="text-xs text-gray-500">Manage direct, indirect, percentage, headcount, and consumable recurring cost tables.</p>
+                  <h2 className="text-lg font-bold text-foreground">3. Expenses Tables</h2>
+                  <p className="text-xs text-text-tertiary">Manage direct, indirect, percentage, headcount, and consumable recurring cost tables.</p>
                 </div>
               </div>
               {openSections.expenses ? (
-                <ChevronUp className="w-5 h-5 text-gray-400" />
+                <ChevronUp className="w-5 h-5 text-text-tertiary" />
               ) : (
-                <ChevronDown className="w-5 h-5 text-gray-400" />
+                <ChevronDown className="w-5 h-5 text-text-tertiary" />
               )}
             </button>
 
             {openSections.expenses && (
-              <div className="p-6 space-y-8 bg-white">
+              <div className="p-6 space-y-8 bg-card">
 
                 {/* 3.1 Direct Fixed Expenses */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-sm font-bold text-gray-900">Direct Fixed Expenses</h3>
-                      <p className="text-xs text-gray-500">Kitchen gas, raw material logistics, and direct production costs.</p>
+                      <h3 className="text-sm font-bold text-foreground">Direct Fixed Expenses</h3>
+                      <p className="text-xs text-text-tertiary">Kitchen gas, raw material logistics, and direct production costs.</p>
                     </div>
                     <Button size="sm" onClick={addDirectFixed} className="bg-primary text-white hover:bg-primary/90">
                       <Plus className="w-4 h-4 mr-1" /> Add Row
                     </Button>
                   </div>
 
-                  <div className="border border-gray-200 rounded-xl overflow-hidden">
-                    <table className="w-full text-left text-sm text-gray-600">
-                      <thead className="bg-gray-50 text-gray-700 font-medium border-b border-gray-200">
+                  <div className="border border-border rounded-xl overflow-hidden">
+                    <table className="w-full text-left text-sm text-muted-foreground">
+                      <thead className="bg-muted text-muted-foreground font-medium border-b border-border">
                         <tr>
                           <th className="p-3.5">Expense</th>
                           <th className="p-3.5">Amount ($)</th>
                           <th className="p-3.5 text-right">Action</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-200">
+                      <tbody className="divide-y divide-border">
                         {directFixedExpenses.map((row) => (
-                          <tr key={row.id} className="hover:bg-gray-50/50">
+                          <tr key={row.id} className="hover:bg-muted">
                             <td className="p-3.5">
                               <Input
                                 value={row.expense}
@@ -558,7 +561,7 @@ export const ReportSettingsPage: React.FC = () => {
                                 onClick={() =>
                                   setDirectFixedExpenses(directFixedExpenses.filter((item) => item.id !== row.id))
                                 }
-                                className="text-red-500 hover:text-red-700 p-1 rounded-md hover:bg-red-50"
+                                className="text-destructive hover:text-destructive p-1 rounded-md hover:bg-destructive-tint"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -571,29 +574,29 @@ export const ReportSettingsPage: React.FC = () => {
                 </div>
 
                 {/* 3.2 Indirect Fixed Expenses */}
-                <div className="space-y-3 pt-4 border-t border-gray-100">
+                <div className="space-y-3 pt-4 border-t border-border">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-sm font-bold text-gray-900">Indirect Fixed Expenses</h3>
-                      <p className="text-xs text-gray-500">Building leases, software subscriptions, insurance, and administrative fees.</p>
+                      <h3 className="text-sm font-bold text-foreground">Indirect Fixed Expenses</h3>
+                      <p className="text-xs text-text-tertiary">Building leases, software subscriptions, insurance, and administrative fees.</p>
                     </div>
                     <Button size="sm" onClick={addIndirectFixed} className="bg-primary text-white hover:bg-primary/90">
                       <Plus className="w-4 h-4 mr-1" /> Add Row
                     </Button>
                   </div>
 
-                  <div className="border border-gray-200 rounded-xl overflow-hidden">
-                    <table className="w-full text-left text-sm text-gray-600">
-                      <thead className="bg-gray-50 text-gray-700 font-medium border-b border-gray-200">
+                  <div className="border border-border rounded-xl overflow-hidden">
+                    <table className="w-full text-left text-sm text-muted-foreground">
+                      <thead className="bg-muted text-muted-foreground font-medium border-b border-border">
                         <tr>
                           <th className="p-3.5">Expense</th>
                           <th className="p-3.5">Amount ($)</th>
                           <th className="p-3.5 text-right">Action</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-200">
+                      <tbody className="divide-y divide-border">
                         {indirectFixedExpenses.map((row) => (
-                          <tr key={row.id} className="hover:bg-gray-50/50">
+                          <tr key={row.id} className="hover:bg-muted">
                             <td className="p-3.5">
                               <Input
                                 value={row.expense}
@@ -624,7 +627,7 @@ export const ReportSettingsPage: React.FC = () => {
                                 onClick={() =>
                                   setIndirectFixedExpenses(indirectFixedExpenses.filter((item) => item.id !== row.id))
                                 }
-                                className="text-red-500 hover:text-red-700 p-1 rounded-md hover:bg-red-50"
+                                className="text-destructive hover:text-destructive p-1 rounded-md hover:bg-destructive-tint"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -637,20 +640,20 @@ export const ReportSettingsPage: React.FC = () => {
                 </div>
 
                 {/* 3.3 Percentage Expenses */}
-                <div className="space-y-3 pt-4 border-t border-gray-100">
+                <div className="space-y-3 pt-4 border-t border-border">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-sm font-bold text-gray-900">Percentage Expenses</h3>
-                      <p className="text-xs text-gray-500">Payment processor rates, delivery aggregator cuts, and royalties.</p>
+                      <h3 className="text-sm font-bold text-foreground">Percentage Expenses</h3>
+                      <p className="text-xs text-text-tertiary">Payment processor rates, delivery aggregator cuts, and royalties.</p>
                     </div>
                     <Button size="sm" onClick={addPercentageExpense} className="bg-primary text-white hover:bg-primary/90">
                       <Plus className="w-4 h-4 mr-1" /> Add Row
                     </Button>
                   </div>
 
-                  <div className="border border-gray-200 rounded-xl overflow-hidden">
-                    <table className="w-full text-left text-sm text-gray-600">
-                      <thead className="bg-gray-50 text-gray-700 font-medium border-b border-gray-200">
+                  <div className="border border-border rounded-xl overflow-hidden">
+                    <table className="w-full text-left text-sm text-muted-foreground">
+                      <thead className="bg-muted text-muted-foreground font-medium border-b border-border">
                         <tr>
                           <th className="p-3.5">Expense</th>
                           <th className="p-3.5">Percentage (%)</th>
@@ -658,9 +661,9 @@ export const ReportSettingsPage: React.FC = () => {
                           <th className="p-3.5 text-right">Action</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-200">
+                      <tbody className="divide-y divide-border">
                         {percentageExpenses.map((row) => (
-                          <tr key={row.id} className="hover:bg-gray-50/50">
+                          <tr key={row.id} className="hover:bg-muted">
                             <td className="p-3.5">
                               <Input
                                 value={row.expense}
@@ -708,7 +711,7 @@ export const ReportSettingsPage: React.FC = () => {
                                 onClick={() =>
                                   setPercentageExpenses(percentageExpenses.filter((item) => item.id !== row.id))
                                 }
-                                className="text-red-500 hover:text-red-700 p-1 rounded-md hover:bg-red-50"
+                                className="text-destructive hover:text-destructive p-1 rounded-md hover:bg-destructive-tint"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -721,29 +724,29 @@ export const ReportSettingsPage: React.FC = () => {
                 </div>
 
                 {/* 3.4 Employee Costs */}
-                <div className="space-y-3 pt-4 border-t border-gray-100">
+                <div className="space-y-3 pt-4 border-t border-border">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-sm font-bold text-gray-900">Employee Costs</h3>
-                      <p className="text-xs text-gray-500">Staff role monthly compensation and headcount count.</p>
+                      <h3 className="text-sm font-bold text-foreground">Employee Costs</h3>
+                      <p className="text-xs text-text-tertiary">Staff role monthly compensation and headcount count.</p>
                     </div>
                     <Button size="sm" onClick={addEmployeeCost} className="bg-primary text-white hover:bg-primary/90">
                       <Plus className="w-4 h-4 mr-1" /> Add Row
                     </Button>
                   </div>
 
-                  <div className="border border-gray-200 rounded-xl overflow-hidden">
-                    <table className="w-full text-left text-sm text-gray-600">
-                      <thead className="bg-gray-50 text-gray-700 font-medium border-b border-gray-200">
+                  <div className="border border-border rounded-xl overflow-hidden">
+                    <table className="w-full text-left text-sm text-muted-foreground">
+                      <thead className="bg-muted text-muted-foreground font-medium border-b border-border">
                         <tr>
                           <th className="p-3.5">Expense</th>
                           <th className="p-3.5">Amount ($)</th>
                           <th className="p-3.5 text-right">Action</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-200">
+                      <tbody className="divide-y divide-border">
                         {employeeCosts.map((row) => (
-                          <tr key={row.id} className="hover:bg-gray-50/50">
+                          <tr key={row.id} className="hover:bg-muted">
                             <td className="p-3.5">
                               <Input
                                 value={row.expense}
@@ -774,7 +777,7 @@ export const ReportSettingsPage: React.FC = () => {
                                 onClick={() =>
                                   setEmployeeCosts(employeeCosts.filter((item) => item.id !== row.id))
                                 }
-                                className="text-red-500 hover:text-red-700 p-1 rounded-md hover:bg-red-50"
+                                className="text-destructive hover:text-destructive p-1 rounded-md hover:bg-destructive-tint"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -787,29 +790,29 @@ export const ReportSettingsPage: React.FC = () => {
                 </div>
 
                 {/* 3.5 Monthly Fixed Expenses */}
-                <div className="space-y-3 pt-4 border-t border-gray-100">
+                <div className="space-y-3 pt-4 border-t border-border">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-sm font-bold text-gray-900">Monthly Fixed Expenses</h3>
-                      <p className="text-xs text-gray-500">Recurring monthly telecom, maintenance, and sanitation overheads.</p>
+                      <h3 className="text-sm font-bold text-foreground">Monthly Fixed Expenses</h3>
+                      <p className="text-xs text-text-tertiary">Recurring monthly telecom, maintenance, and sanitation overheads.</p>
                     </div>
                     <Button size="sm" onClick={addMonthlyExpense} className="bg-primary text-white hover:bg-primary/90">
                       <Plus className="w-4 h-4 mr-1" /> Add Row
                     </Button>
                   </div>
 
-                  <div className="border border-gray-200 rounded-xl overflow-hidden">
-                    <table className="w-full text-left text-sm text-gray-600">
-                      <thead className="bg-gray-50 text-gray-700 font-medium border-b border-gray-200">
+                  <div className="border border-border rounded-xl overflow-hidden">
+                    <table className="w-full text-left text-sm text-muted-foreground">
+                      <thead className="bg-muted text-muted-foreground font-medium border-b border-border">
                         <tr>
                           <th className="p-3.5">Expense</th>
                           <th className="p-3.5">Amount ($)</th>
                           <th className="p-3.5 text-right">Action</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-200">
+                      <tbody className="divide-y divide-border">
                         {monthlyFixedExpenses.map((row) => (
-                          <tr key={row.id} className="hover:bg-gray-50/50">
+                          <tr key={row.id} className="hover:bg-muted">
                             <td className="p-3.5">
                               <Input
                                 value={row.expense}
@@ -840,7 +843,7 @@ export const ReportSettingsPage: React.FC = () => {
                                 onClick={() =>
                                   setMonthlyFixedExpenses(monthlyFixedExpenses.filter((item) => item.id !== row.id))
                                 }
-                                className="text-red-500 hover:text-red-700 p-1 rounded-md hover:bg-red-50"
+                                className="text-destructive hover:text-destructive p-1 rounded-md hover:bg-destructive-tint"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -853,29 +856,29 @@ export const ReportSettingsPage: React.FC = () => {
                 </div>
 
                 {/* 3.6 Consumables */}
-                <div className="space-y-3 pt-4 border-t border-gray-100">
+                <div className="space-y-3 pt-4 border-t border-border">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-sm font-bold text-gray-900">Consumables Budget</h3>
-                      <p className="text-xs text-gray-500">Thermal paper rolls, take-away packaging, and disposable supplies.</p>
+                      <h3 className="text-sm font-bold text-foreground">Consumables Budget</h3>
+                      <p className="text-xs text-text-tertiary">Thermal paper rolls, take-away packaging, and disposable supplies.</p>
                     </div>
                     <Button size="sm" onClick={addConsumable} className="bg-primary text-white hover:bg-primary/90">
                       <Plus className="w-4 h-4 mr-1" /> Add Row
                     </Button>
                   </div>
 
-                  <div className="border border-gray-200 rounded-xl overflow-hidden">
-                    <table className="w-full text-left text-sm text-gray-600">
-                      <thead className="bg-gray-50 text-gray-700 font-medium border-b border-gray-200">
+                  <div className="border border-border rounded-xl overflow-hidden">
+                    <table className="w-full text-left text-sm text-muted-foreground">
+                      <thead className="bg-muted text-muted-foreground font-medium border-b border-border">
                         <tr>
                           <th className="p-3.5">Material</th>
                           <th className="p-3.5">Cost Per Unit ($)</th>
                           <th className="p-3.5 text-right">Action</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-200">
+                      <tbody className="divide-y divide-border">
                         {consumables.map((row) => (
-                          <tr key={row.id} className="hover:bg-gray-50/50">
+                          <tr key={row.id} className="hover:bg-muted">
                             <td className="p-3.5">
                               <Input
                                 value={row.material}
@@ -906,7 +909,7 @@ export const ReportSettingsPage: React.FC = () => {
                                 onClick={() =>
                                   setConsumables(consumables.filter((item) => item.id !== row.id))
                                 }
-                                className="text-red-500 hover:text-red-700 p-1 rounded-md hover:bg-red-50"
+                                className="text-destructive hover:text-destructive p-1 rounded-md hover:bg-destructive-tint"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -920,11 +923,9 @@ export const ReportSettingsPage: React.FC = () => {
 
               </div>
             )}
-          </Card>
-
-        </div>
-      </div>
-    </div>
+        </Card>
+      </Section>
+    </Page>
   );
 };
 

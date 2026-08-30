@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useBranchContext } from '../../context/BranchContext';
-import { Building, Plus, Edit2 } from 'lucide-react';
-import { Card, Button, Input, Select, Spinner, showToast } from '@ury/ui';
+import { Plus } from 'lucide-react';
+import { Badge, Button, Input, Page, Panel, Select, Spinner, showToast } from '@ury/ui';
 import { SearchableSelect } from '../../components/common/SearchableSelect';
 import { dashboardService } from '../../services/dashboard';
 import { call } from '@ury/core';
@@ -195,9 +195,9 @@ export const ProductionDepartmentPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <Page>
       {/* Toolbar — Partition Style, no title */}
-      <div className="-mx-6 px-6 -mt-6 pt-6 pb-3 border-b border-gray-200 flex flex-col md:flex-row items-center justify-end gap-4">
+      <div className="-mx-6 px-6 -mt-6 pt-6 pb-3 border-b border-border flex flex-col md:flex-row items-center justify-end gap-4">
         <Button
           onClick={openAddDrawer}
           className="bg-primary hover:bg-primary/90 text-white font-semibold flex items-center space-x-1.5 shadow-xs"
@@ -208,51 +208,51 @@ export const ProductionDepartmentPage: React.FC = () => {
       </div>
 
       {loading ? (
-        <div className="py-16 flex items-center justify-center bg-white rounded-lg border border-gray-200">
+        <div className="mt-section py-16 flex items-center justify-center bg-card rounded-[9px] border border-hair">
           <Spinner className="w-8 h-8 text-primary" />
         </div>
       ) : departments.length === 0 ? (
-        <Card className="p-12 flex flex-col items-center justify-center text-center rounded-lg border border-gray-200 shadow-sm bg-white">
-          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-            <Building className="w-6 h-6 text-primary" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">No Production Departments Configured</h3>
-          <p className="text-gray-500 mb-6 max-w-sm">
-            Add production departments to organize kitchen operations and control policies.
-          </p>
+        <div className="mt-section px-4 py-[18px] text-xs text-text-tertiary flex items-center gap-2.5 bg-card border border-hair rounded-[9px]">
+          <span>Add production departments to organize kitchen operations and control policies.</span>
           <Button
             onClick={openAddDrawer}
-            className="bg-primary hover:bg-primary/90 text-white font-semibold flex items-center space-x-1.5 shadow-xs"
+            variant="chrome"
+            size="compactSm"
+            className="ml-auto"
           >
-            <Plus className="w-4 h-4" />
-            <span>Add Production Department</span>
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add Dept</span>
           </Button>
-        </Card>
+        </div>
       ) : (
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-          <table className="w-full text-left text-sm text-gray-600">
-            <thead className="bg-gray-50 border-b border-gray-100 text-xs text-gray-500 font-semibold">
+        <Panel className="mt-section overflow-hidden">
+          <table className="w-full text-left text-sm text-muted-foreground">
+            <thead className="border-b border-hair">
               <tr>
-                <th className="px-6 py-4">Department</th>
-                <th className="px-6 py-4">Company</th>
-                <th className="px-6 py-4">Branch</th>
-                <th className="px-6 py-4">Warehouse</th>
-                <th className="px-6 py-4">Policy</th>
+                <th className="px-[14px] py-[7px] text-[11px] font-medium text-text-tertiary text-left">Department</th>
+                <th className="px-[14px] py-[7px] text-[11px] font-medium text-text-tertiary text-left">Company</th>
+                <th className="px-[14px] py-[7px] text-[11px] font-medium text-text-tertiary text-left">Branch</th>
+                <th className="px-[14px] py-[7px] text-[11px] font-medium text-text-tertiary text-left">Warehouse</th>
+                <th className="px-[14px] py-[7px] text-[11px] font-medium text-text-tertiary text-left">Policy</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-hair">
               {departments.map((dept) => (
-                <tr key={dept.name} className="transition-colors cursor-pointer hover:bg-gray-50" onClick={() => openEditDrawer(dept)}>
-                  <td className="px-6 py-4 font-semibold text-gray-900">{dept.department_name || dept.name}</td>
-                  <td className="px-6 py-4">{dept.company || '-'}</td>
-                  <td className="px-6 py-4">{dept.branch || '-'}</td>
-                  <td className="px-6 py-4">{dept.department_warehouse || '-'}</td>
-                  <td className="px-6 py-4 text-xs bg-blue-50 text-blue-700 rounded px-2 py-1 inline-block">{dept.issue_control_policy || 'Plan Controlled'}</td>
+                <tr key={dept.name} className="transition-colors cursor-pointer hover:bg-muted" onClick={() => openEditDrawer(dept)}>
+                  <td className="px-[14px] py-2 text-[12.5px] font-semibold text-foreground">{dept.department_name || dept.name}</td>
+                  <td className="px-[14px] py-2 text-[12.5px]">{dept.company || '-'}</td>
+                  <td className="px-[14px] py-2 text-[12.5px]">{dept.branch || '-'}</td>
+                  <td className="px-[14px] py-2 text-[12.5px]">{dept.department_warehouse || '-'}</td>
+                  <td className="px-[14px] py-2 text-[12.5px]">
+                    <Badge size="tag" variant="cancelled">
+                      {dept.issue_control_policy || 'Plan Controlled'}
+                    </Badge>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        </Panel>
       )}
 
       {/* Add/Edit SideDrawer */}
@@ -263,7 +263,7 @@ export const ProductionDepartmentPage: React.FC = () => {
       >
         <form onSubmit={handleSaveDepartment} className="space-y-4 text-sm">
           <div>
-            <label className="block font-semibold text-gray-700 mb-1">Department Name *</label>
+            <label className="block font-semibold text-muted-foreground mb-1">Department Name *</label>
             <Input
               value={newDepartment.department_name}
               onChange={(e) => setNewDepartment({ ...newDepartment, department_name: e.target.value })}
@@ -272,7 +272,7 @@ export const ProductionDepartmentPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-700 mb-1">Company *</label>
+            <label className="block font-semibold text-muted-foreground mb-1">Company *</label>
             <SearchableSelect
               id="company"
               value={newDepartment.company}
@@ -283,7 +283,7 @@ export const ProductionDepartmentPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-700 mb-1">Branch *</label>
+            <label className="block font-semibold text-muted-foreground mb-1">Branch *</label>
             <SearchableSelect
               id="branch"
               value={newDepartment.branch}
@@ -294,7 +294,7 @@ export const ProductionDepartmentPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-700 mb-1">Department Manager</label>
+            <label className="block font-semibold text-muted-foreground mb-1">Department Manager</label>
             <SearchableSelect
               id="department_manager"
               value={newDepartment.department_manager}
@@ -305,7 +305,7 @@ export const ProductionDepartmentPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-700 mb-1">Department Warehouse *</label>
+            <label className="block font-semibold text-muted-foreground mb-1">Department Warehouse *</label>
             <SearchableSelect
               id="department_warehouse"
               value={newDepartment.department_warehouse}
@@ -316,7 +316,7 @@ export const ProductionDepartmentPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-700 mb-1">Cost Center *</label>
+            <label className="block font-semibold text-muted-foreground mb-1">Cost Center *</label>
             <SearchableSelect
               id="cost_center"
               value={newDepartment.cost_center}
@@ -327,7 +327,7 @@ export const ProductionDepartmentPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-700 mb-1">Issue Control Policy *</label>
+            <label className="block font-semibold text-muted-foreground mb-1">Issue Control Policy *</label>
             <Select
               value={newDepartment.issue_control_policy}
               onChange={(e) => setNewDepartment({ ...newDepartment, issue_control_policy: e.target.value })}
@@ -339,7 +339,7 @@ export const ProductionDepartmentPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-700 mb-1">Wastage Policy</label>
+            <label className="block font-semibold text-muted-foreground mb-1">Wastage Policy</label>
             <Input
               value={newDepartment.wastage_policy}
               onChange={(e) => setNewDepartment({ ...newDepartment, wastage_policy: e.target.value })}
@@ -353,12 +353,12 @@ export const ProductionDepartmentPage: React.FC = () => {
               id="enabled"
               checked={newDepartment.enabled}
               onChange={(e) => setNewDepartment({ ...newDepartment, enabled: e.target.checked })}
-              className="rounded border-gray-300"
+              className="rounded border-border"
             />
-            <label htmlFor="enabled" className="font-semibold text-gray-700">Enabled</label>
+            <label htmlFor="enabled" className="font-semibold text-muted-foreground">Enabled</label>
           </div>
 
-          <div className="pt-6 flex justify-end gap-2 border-t mt-4 border-gray-100">
+          <div className="pt-6 flex justify-end gap-2 border-t mt-4 border-border">
             <Button type="button" variant="outline" onClick={() => setIsDrawerOpen(false)} disabled={saving}>
               Cancel
             </Button>
@@ -371,7 +371,7 @@ export const ProductionDepartmentPage: React.FC = () => {
           </div>
         </form>
       </SideDrawer>
-    </div>
+    </Page>
   );
 };
 

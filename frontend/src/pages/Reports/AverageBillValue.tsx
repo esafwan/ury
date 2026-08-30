@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { call, formatCurrency } from '@ury/core';
-import { StatCard, DataTable, type DataTableColumn } from '@ury/ui';
-import { Gauge, IndianRupee, Receipt } from 'lucide-react';
+import { KpiStrip, DataTable, type DataTableColumn, Page, Section } from '@ury/ui';
 import { useBranchContext } from '../../context/BranchContext';
 import { DateRangeFilter, type DateRangeValue } from '../../components/reports/DateRangeFilter';
 import { LineChartCard } from '../../components/reports/charts/LineChartCard';
@@ -60,7 +59,7 @@ export function AverageBillValue() {
   }, [fetchData]);
 
   return (
-    <div className="space-y-6">
+    <Page>
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-semibold">Average Bill Value</h1>
@@ -72,34 +71,38 @@ export function AverageBillValue() {
       </div>
 
       {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
+        <Section>
+          <div className="rounded-md border border-destructive-tint-border bg-destructive-tint px-4 py-3 text-sm text-destructive">
+            {error}
+          </div>
+        </Section>
       )}
 
       {isLoading && !data ? (
-        <div className="text-sm text-muted-foreground">Loading...</div>
+        <Section>
+          <div className="text-sm text-muted-foreground">Loading...</div>
+        </Section>
       ) : data ? (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <StatCard label="Total Bills" value={data.summary.total_bills} icon={<Receipt className="w-4 h-4" />} />
-            <StatCard
-              label="Total Sales"
-              value={formatCurrency(data.summary.total_sales)}
-              icon={<IndianRupee className="w-4 h-4" />}
+          <Section>
+            <KpiStrip
+              items={[
+                { label: 'Total Bills', value: data.summary.total_bills },
+                { label: 'Total Sales', value: formatCurrency(data.summary.total_sales) },
+                { label: 'Average Bill Value', value: formatCurrency(data.summary.average_abv) },
+              ]}
             />
-            <StatCard
-              label="Average Bill Value"
-              value={formatCurrency(data.summary.average_abv)}
-              icon={<Gauge className="w-4 h-4" />}
-            />
-          </div>
+          </Section>
 
-          <LineChartCard title="ABV Trend" data={data.data} xKey="date" yKeys={['abv']} labels={{ abv: 'Avg Bill Value' }} />
+          <Section>
+            <LineChartCard title="ABV Trend" data={data.data} xKey="date" yKeys={['abv']} labels={{ abv: 'Avg Bill Value' }} />
+          </Section>
 
-          <DataTable columns={columns} rows={data.data} isLoading={isLoading} />
+          <Section>
+            <DataTable columns={columns} rows={data.data} isLoading={isLoading} />
+          </Section>
         </>
       ) : null}
-    </div>
+    </Page>
   );
 }

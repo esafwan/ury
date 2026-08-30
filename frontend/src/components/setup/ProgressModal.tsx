@@ -65,12 +65,12 @@ export function ProgressModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 backdrop-blur-sm">
-      <div className="w-full max-w-[540px] bg-white rounded-lg shadow-xl overflow-hidden">
+      <div className="w-full max-w-[540px] bg-card rounded-lg shadow-xl overflow-hidden">
         
         {/* Segmented Top Bar */}
         <div className="flex px-10 pt-10 pb-6 gap-1">
           {Array.from({ length: totalSteps }).map((_, i) => {
-            const segmentProgress = i <= activeIndex ? 'bg-primary' : 'bg-gray-200';
+            const segmentProgress = i <= activeIndex ? 'bg-primary' : 'bg-muted';
             return (
               <div key={i} className={`flex-1 h-1.5 rounded-full ${segmentProgress}`} />
             );
@@ -89,17 +89,17 @@ export function ProgressModal({
               const isActive = idx === activeIndex;
 
               return (
-                <div key={idx} className="flex items-center gap-4 py-3 border-b border-gray-100 last:border-0 h-12">
+                <div key={idx} className="flex items-center gap-4 py-3 border-b border-border last:border-0 h-12">
                   <div className="w-6 h-6 flex items-center justify-center shrink-0">
                     {isDone ? (
                       <CheckCircle2 className="w-6 h-6 text-white fill-green-500" />
                     ) : isActive ? (
                       <Loader2 className="w-6 h-6 text-primary animate-spin" />
                     ) : (
-                      <Circle className="w-6 h-6 text-gray-200" />
+                      <Circle className="w-6 h-6 text-border" />
                     )}
                   </div>
-                  <span className={`text-sm ${isActive ? 'font-medium text-gray-900' : isDone ? 'text-foreground' : 'text-gray-400'}`}>
+                  <span className={`text-sm ${isActive ? 'font-medium text-foreground' : isDone ? 'text-foreground' : 'text-text-tertiary'}`}>
                     {step}
                   </span>
                 </div>
@@ -108,7 +108,7 @@ export function ProgressModal({
           </div>
 
           {error && (
-            <div className="mt-4 p-4 bg-red-50 text-red-600 text-sm rounded-lg border border-red-200">
+            <div className="mt-4 p-4 bg-destructive-tint text-destructive text-sm rounded-lg border border-destructive-tint-border">
               {error}
             </div>
           )}

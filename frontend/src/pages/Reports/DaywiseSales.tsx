@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { call, formatCurrency } from '@ury/core';
-import { StatCard, DataTable, type DataTableColumn } from '@ury/ui';
-import { Receipt, IndianRupee, TrendingUp, Trophy } from 'lucide-react';
+import { KpiStrip, DataTable, type DataTableColumn, Page, Section } from '@ury/ui';
 import { useBranchContext } from '../../context/BranchContext';
 import { DateRangeFilter, type DateRangeValue } from '../../components/reports/DateRangeFilter';
 import { LineChartCard } from '../../components/reports/charts/LineChartCard';
@@ -75,7 +74,7 @@ export function DaywiseSales() {
   }, [fetchData]);
 
   return (
-    <div className="space-y-6">
+    <Page>
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-semibold">Daywise Sales</h1>
@@ -87,54 +86,49 @@ export function DaywiseSales() {
       </div>
 
       {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
+        <Section>
+          <div className="rounded-md border border-destructive-tint-border bg-destructive-tint px-4 py-3 text-sm text-destructive">
+            {error}
+          </div>
+        </Section>
       )}
 
       {isLoading && !data ? (
-        <div className="text-sm text-muted-foreground">Loading...</div>
+        <Section>
+          <div className="text-sm text-muted-foreground">Loading...</div>
+        </Section>
       ) : data ? (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard
-              label="Period Total"
-              value={formatCurrency(data.summary.period_total)}
-              icon={<IndianRupee className="w-4 h-4" />}
+          <Section>
+            <KpiStrip
+              items={[
+                { label: 'Period Total', value: formatCurrency(data.summary.period_total) },
+                { label: 'Avg Daily Sales', value: formatCurrency(data.summary.period_avg_daily) },
+                { label: 'Total Invoices', value: data.summary.total_invoices },
+                {
+                  label: 'Peak Day',
+                  value: data.summary.peak_day ? `${data.summary.peak_day}` : '—',
+                  hint: data.summary.peak_day ? formatCurrency(data.summary.peak_day_total) : undefined,
+                },
+              ]}
             />
-            <StatCard
-              label="Avg Daily Sales"
-              value={formatCurrency(data.summary.period_avg_daily)}
-              icon={<TrendingUp className="w-4 h-4" />}
-            />
-            <StatCard
-              label="Total Invoices"
-              value={data.summary.total_invoices}
-              icon={<Receipt className="w-4 h-4" />}
-            />
-            <StatCard
-              label="Peak Day"
-              value={data.summary.peak_day ? `${data.summary.peak_day}` : '—'}
-              delta={
-                data.summary.peak_day
-                  ? { value: formatCurrency(data.summary.peak_day_total), direction: 'up' }
-                  : undefined
-              }
-              icon={<Trophy className="w-4 h-4" />}
-            />
-          </div>
+          </Section>
 
-          <LineChartCard
-            title="Grand Total Trend"
-            data={data.rows}
-            xKey="date"
-            yKeys={['grand_total']}
-            labels={{ grand_total: 'Grand Total' }}
-          />
+          <Section>
+            <LineChartCard
+              title="Grand Total Trend"
+              data={data.rows}
+              xKey="date"
+              yKeys={['grand_total']}
+              labels={{ grand_total: 'Grand Total' }}
+            />
+          </Section>
 
-          <DataTable columns={columns} rows={data.rows} isLoading={isLoading} />
+          <Section>
+            <DataTable columns={columns} rows={data.rows} isLoading={isLoading} />
+          </Section>
         </>
       ) : null}
-    </div>
+    </Page>
   );
 }

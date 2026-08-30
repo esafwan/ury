@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useBranchContext } from '../../context/BranchContext';
-import { Users, Plus, ShieldCheck, Edit2 } from 'lucide-react';
-import { Card, Button, Badge, Input, Spinner, showToast } from '@ury/ui';
+import { Plus, ShieldCheck, Edit2 } from 'lucide-react';
+import { Badge, Button, Input, Page, Section, Spinner, showToast } from '@ury/ui';
 import { SearchableSelect } from '../../components/common/SearchableSelect';
 import { dashboardService } from '../../services/dashboard';
 import { call } from '@ury/core';
@@ -188,11 +188,12 @@ export const UserPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-gray-900">Users</h1>
+    <Page>
+      <h1 className="text-xl font-semibold text-foreground">Users</h1>
 
       {/* Toolbar — no title, partition style */}
-      <div className="flex flex-col md:flex-row items-center justify-end gap-4 pb-3 border-b border-gray-200 -mx-6 px-6 -mt-6 pt-6">
+      <Section>
+        <div className="flex flex-col md:flex-row items-center justify-end gap-4 pb-3 border-b border-border -mx-page-x px-page-x pt-6">
         <Button
           onClick={openAddDrawer}
           className="bg-primary hover:bg-primary/90 text-white font-semibold flex items-center space-x-1.5 shadow-xs"
@@ -201,63 +202,61 @@ export const UserPage: React.FC = () => {
           <span>Add User</span>
         </Button>
       </div>
+      </Section>
 
+      <Section>
       {loading ? (
-        <div className="py-16 flex items-center justify-center bg-white rounded-lg border border-gray-200">
+        <div className="py-16 flex items-center justify-center bg-card rounded-[9px] border border-hair">
           <Spinner className="w-8 h-8 text-primary" />
         </div>
       ) : users.length === 0 ? (
-        <Card className="p-12 flex flex-col items-center justify-center text-center rounded-lg border border-gray-200 shadow-sm bg-white">
-          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-            <Users className="w-6 h-6 text-primary" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">No Users Configured</h3>
-          <p className="text-gray-500 mb-6 max-w-sm">
-            Add staff users and assign them roles for this branch.
-          </p>
+        <div className="px-4 py-[18px] text-xs text-text-tertiary flex items-center gap-2.5 bg-card border border-hair rounded-[9px]">
+          <span>Add staff users and assign them roles for this branch.</span>
           <Button
             onClick={openAddDrawer}
-            className="bg-primary hover:bg-primary/90 text-white font-semibold flex items-center space-x-1.5 shadow-xs"
+            variant="chrome"
+            size="compactSm"
+            className="ml-auto"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" />
             <span>Add User</span>
           </Button>
-        </Card>
+        </div>
       ) : (
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-          <table className="w-full text-left text-sm text-gray-600">
-            <thead className="bg-gray-50 border-b border-gray-100 text-xs text-gray-500 font-semibold">
+        <div className="bg-card border border-hair rounded-[9px] overflow-hidden">
+          <table className="w-full text-left text-sm text-muted-foreground">
+            <thead className="border-b border-hair">
               <tr>
-                <th className="px-6 py-4">User</th>
-                <th className="px-6 py-4">User ID</th>
-                <th className="px-6 py-4">Role</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+                <th className="px-[14px] py-[7px] text-[11px] font-medium text-text-tertiary text-left">User</th>
+                <th className="px-[14px] py-[7px] text-[11px] font-medium text-text-tertiary text-left">User ID</th>
+                <th className="px-[14px] py-[7px] text-[11px] font-medium text-text-tertiary text-left">Role</th>
+                <th className="px-[14px] py-[7px] text-[11px] font-medium text-text-tertiary text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-hair">
               {users.map((user) => (
-                <tr key={user.name} className="hover:bg-primary/10 transition-colors">
-                  <td className="px-6 py-4">
+                <tr key={user.name} className="hover:bg-muted transition-colors">
+                  <td className="px-[14px] py-2 text-[12.5px]">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-xs uppercase shrink-0">
                         {(user.first_name || user.email || user.name || '?').charAt(0)}
                       </div>
-                      <div className="font-semibold text-gray-900">
+                      <div className="font-semibold text-foreground">
                         {user.first_name || user.full_name || user.name}
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-gray-600 font-medium">
+                  <td className="px-[14px] py-2 text-[12.5px] font-mono text-muted-foreground">
                     {user.email}
                   </td>
-                  <td className="px-6 py-4">
-                    <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary text-[10px]">
-                      <ShieldCheck className="w-3 h-3 mr-1" />
+                  <td className="px-[14px] py-2 text-[12.5px]">
+                    <Badge size="tag" variant="tagAccent">
+                      <ShieldCheck className="w-3 h-3" />
                       {getDisplayRole(user)}
                     </Badge>
                   </td>
-                  <td className="px-6 py-4 text-right">
-                    <Button variant="ghost" size="sm" onClick={() => openEditDrawer(user)} className="text-gray-500 hover:text-primary">
+                  <td className="px-[14px] py-2 text-[12.5px] text-right">
+                    <Button variant="ghost" size="sm" onClick={() => openEditDrawer(user)} className="text-text-tertiary hover:text-primary">
                       <Edit2 className="w-4 h-4" />
                     </Button>
                   </td>
@@ -267,6 +266,7 @@ export const UserPage: React.FC = () => {
           </table>
         </div>
       )}
+      </Section>
 
       {/* Add/Edit SideDrawer */}
       <SideDrawer
@@ -277,7 +277,7 @@ export const UserPage: React.FC = () => {
         <form onSubmit={handleSaveUser} className="space-y-5 text-sm">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block font-semibold text-gray-700 mb-1.5">First Name</label>
+              <label className="block font-semibold text-muted-foreground mb-1.5">First Name</label>
               <Input
                 value={newUser.first_name}
                 onChange={(e) => setNewUser({ ...newUser, first_name: e.target.value })}
@@ -285,7 +285,7 @@ export const UserPage: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block font-semibold text-gray-700 mb-1.5">Last Name</label>
+              <label className="block font-semibold text-muted-foreground mb-1.5">Last Name</label>
               <Input
                 value={newUser.last_name}
                 onChange={(e) => setNewUser({ ...newUser, last_name: e.target.value })}
@@ -294,7 +294,7 @@ export const UserPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-700 mb-1.5">User ID</label>
+            <label className="block font-semibold text-muted-foreground mb-1.5">User ID</label>
             <Input
               type="email"
               value={newUser.email}
@@ -305,7 +305,7 @@ export const UserPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-700 mb-1.5">Role / Access Level</label>
+            <label className="block font-semibold text-muted-foreground mb-1.5">Role / Access Level</label>
             <SearchableSelect
               id="role"
               value={newUser.role}
@@ -324,14 +324,14 @@ export const UserPage: React.FC = () => {
               id="user-enabled"
               checked={newUser.enabled}
               onChange={(e) => setNewUser({ ...newUser, enabled: e.target.checked })}
-              className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2 cursor-pointer"
+              className="w-4 h-4 text-primary bg-muted border-border rounded focus:ring-primary focus:ring-2 cursor-pointer"
             />
-            <label htmlFor="user-enabled" className="font-semibold text-gray-700 cursor-pointer">
+            <label htmlFor="user-enabled" className="font-semibold text-muted-foreground cursor-pointer">
               Enabled (Active User)
             </label>
           </div>
 
-          <div className="pt-6 flex justify-end gap-3 border-t mt-4 border-gray-100">
+          <div className="pt-6 flex justify-end gap-3 border-t mt-4 border-border">
             <Button type="button" variant="outline" onClick={() => setIsDrawerOpen(false)} disabled={saving}>
               Cancel
             </Button>
@@ -342,7 +342,7 @@ export const UserPage: React.FC = () => {
           </div>
         </form>
       </SideDrawer>
-    </div>
+    </Page>
   );
 };
 

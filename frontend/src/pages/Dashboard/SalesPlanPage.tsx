@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarDays, CheckCircle2, History, Lock, Save, Search, Send, X } from 'lucide-react';
-import { Button, Card, Input, Spinner } from '@ury/ui';
+import { AttentionFeed, Badge, Button, Card, Input, KpiStrip, Page, Section, Spinner } from '@ury/ui';
 import { useBranchContext } from '../../context/BranchContext';
 import { useAuth } from '../../store/useAuth';
 import {
@@ -72,11 +72,11 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ item, onClose }) => {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="history-modal-title">
       <button className="absolute inset-0 bg-black/40 backdrop-blur-sm" aria-label="Close history" onClick={onClose} />
-      <div className="relative z-[101] w-full max-w-2xl overflow-hidden rounded-lg bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-6 py-4">
+      <div className="relative z-[101] w-full max-w-2xl overflow-hidden rounded-lg bg-card shadow-2xl">
+        <div className="flex items-center justify-between border-b border-border bg-muted px-6 py-4">
           <div>
-            <h2 id="history-modal-title" className="text-lg font-semibold text-gray-900">{item.item_name || item.item_code}</h2>
-            <p className="mt-1 text-sm text-gray-500">Comparable weekday sales history</p>
+            <h2 id="history-modal-title" className="text-lg font-semibold text-foreground">{item.item_name || item.item_code}</h2>
+            <p className="mt-1 text-sm text-text-tertiary">Comparable weekday sales history</p>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close history details">
             <X className="h-5 w-5" />
@@ -84,40 +84,40 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ item, onClose }) => {
         </div>
         <div className="p-6">
           <div className="mb-5 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-md border border-gray-200 p-3">
-              <p className="text-xs font-medium text-gray-500">Average</p>
-              <p className="mt-1 text-xl font-semibold text-gray-900">{formatQty(item.average_qty)} {item.stock_uom}</p>
+            <div className="rounded-md border border-border p-3">
+              <p className="text-xs font-medium text-text-tertiary">Average</p>
+              <p className="mt-1 text-xl font-semibold text-foreground">{formatQty(item.average_qty)} {item.stock_uom}</p>
             </div>
-            <div className="rounded-md border border-gray-200 p-3">
-              <p className="text-xs font-medium text-gray-500">Sample Days</p>
-              <p className="mt-1 text-xl font-semibold text-gray-900">{item.sample_days}</p>
+            <div className="rounded-md border border-border p-3">
+              <p className="text-xs font-medium text-text-tertiary">Sample Days</p>
+              <p className="mt-1 text-xl font-semibold text-foreground">{item.sample_days}</p>
             </div>
-            <div className="rounded-md border border-gray-200 p-3">
-              <p className="text-xs font-medium text-gray-500">Production Unit</p>
-              <p className="mt-1 text-sm font-semibold text-gray-900">{item.production_unit || 'Unassigned'}</p>
+            <div className="rounded-md border border-border p-3">
+              <p className="text-xs font-medium text-text-tertiary">Production Unit</p>
+              <p className="mt-1 text-sm font-semibold text-foreground">{item.production_unit || 'Unassigned'}</p>
             </div>
           </div>
 
           {item.history.length === 0 ? (
-            <div className="rounded-md border border-dashed border-gray-300 p-8 text-center text-sm text-gray-500">
+            <div className="rounded-md border border-dashed border-border p-8 text-center text-sm text-text-tertiary">
               No prior comparable weekday sales found for this item.
             </div>
           ) : (
-            <div className="overflow-hidden rounded-lg border border-gray-200">
+            <div className="overflow-hidden rounded-lg border border-border">
               <table className="w-full text-left text-sm">
-                <thead className="bg-gray-50 text-xs font-semibold text-gray-500">
+                <thead className="bg-muted text-xs font-semibold text-text-tertiary">
                   <tr>
                     <th className="px-4 py-3">Date</th>
                     <th className="px-4 py-3 text-right">Net Qty</th>
                     <th className="px-4 py-3 text-right">Invoices</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-hair">
                   {item.history.map((day) => (
                     <tr key={day.date}>
-                      <td className="px-4 py-3 font-medium text-gray-900">{day.label || day.date}</td>
-                      <td className="px-4 py-3 text-right text-gray-700">{formatQty(day.qty)}</td>
-                      <td className="px-4 py-3 text-right text-gray-500">{day.invoices ?? '-'}</td>
+                      <td className="px-4 py-3 font-medium text-foreground">{day.label || day.date}</td>
+                      <td className="px-4 py-3 text-right text-muted-foreground">{formatQty(day.qty)}</td>
+                      <td className="px-4 py-3 text-right text-text-tertiary">{day.invoices ?? '-'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -146,15 +146,15 @@ const LifecycleStepper: React.FC<LifecycleStepperProps> = ({ status }) => {
         return (
           <React.Fragment key={step.key}>
             {index > 0 && (
-              <div className={`h-px w-6 shrink-0 ${isComplete || isActive ? 'bg-primary' : 'bg-gray-200'}`} />
+              <div className={`h-px w-6 shrink-0 ${isComplete || isActive ? 'bg-primary' : 'bg-muted'}`} />
             )}
             <div
-              className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${
+              className={`inline-flex h-[19px] items-center gap-[5px] rounded-[5px] px-[7px] text-[11px] font-medium ${
                 isActive
-                  ? 'border-primary bg-primary/10 text-primary'
+                  ? 'bg-primary-tint text-primary'
                   : isComplete
-                    ? 'border-gray-200 bg-gray-50 text-gray-500'
-                    : 'border-gray-200 bg-white text-gray-400'
+                    ? 'bg-success-tint text-success'
+                    : 'bg-muted text-text-tertiary'
               }`}
             >
               {step.label}
@@ -163,9 +163,9 @@ const LifecycleStepper: React.FC<LifecycleStepperProps> = ({ status }) => {
         );
       })}
       {isTerminalOther && (
-        <span className="ml-1 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-600">
+        <Badge size="tag" variant="tagDestructive" className="ml-1">
           Superseded/Cancelled
-        </span>
+        </Badge>
       )}
     </div>
   );
@@ -186,6 +186,8 @@ export const SalesPlanPage: React.FC = () => {
   const [transitionError, setTransitionError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<ComparableHistoryItem | null>(null);
+  const [highlightedItemCode, setHighlightedItemCode] = useState<string | null>(null);
+  const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
 
   const draftKey = useMemo(() => {
     if (!historyScope) return null;
@@ -289,6 +291,23 @@ export const SalesPlanPage: React.FC = () => {
   const totalPlannedQty = items.reduce((total, item) => total + item.planned_qty, 0);
   const totalHistoryQty = items.reduce((total, item) => total + item.average_qty, 0);
 
+  // Real, backend-derived blockers: an item with no production unit assigned
+  // can't be routed for prep, and an item with zero comparable sample days
+  // has no history to base the suggested quantity on -- both come straight
+  // off the comparable-history response, nothing fabricated here.
+  const blockedItems = useMemo(() => {
+    return items.filter((item) => item.production_unit === 'Unassigned' || item.sample_days === 0);
+  }, [items]);
+
+  const focusItemRow = (itemCode: string) => {
+    setHighlightedItemCode(itemCode);
+    const row = rowRefs.current[itemCode];
+    row?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    window.setTimeout(() => {
+      setHighlightedItemCode((current) => (current === itemCode ? null : current));
+    }, 2000);
+  };
+
   const updatePlannedQty = (itemCode: string, qty: number) => {
     setItems((currentItems) => currentItems.map((item) => (
       item.item_code === itemCode ? { ...item, planned_qty: Math.max(0, qty) } : item
@@ -351,18 +370,18 @@ export const SalesPlanPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="-mx-6 -mt-6 border-b border-gray-200 px-6 pb-4 pt-6">
+    <Page>
+      <div className="-mx-6 -mt-6 border-b border-border px-6 pb-4 pt-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-gray-900">Sales Plan</h1>
-            <p className="mt-1 text-sm text-gray-500">
+            <h1 className="text-xl font-semibold text-foreground">Sales Plan</h1>
+            <p className="mt-1 text-sm text-text-tertiary">
               We've suggested quantities based on similar days. Adjust anything you expect to be different, then submit the plan for approval.
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <label className="relative block">
-              <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
               <Input
                 aria-label="Plan date"
                 type="date"
@@ -392,61 +411,90 @@ export const SalesPlanPage: React.FC = () => {
         <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <LifecycleStepper status={planStatus} />
           {actionBlockedByRole && (
-            <p className="text-xs text-gray-500">Only managers can approve this plan.</p>
+            <p className="text-xs text-text-tertiary">Only managers can approve this plan.</p>
           )}
         </div>
 
         {transitionError && (
-          <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{transitionError}</p>
+          <p className="mt-3 rounded-md border border-destructive-tint-border bg-destructive-tint px-3 py-2 text-sm text-destructive">{transitionError}</p>
         )}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="p-4">
-          <p className="text-xs font-medium text-gray-500">Planned Qty</p>
-          <p className="mt-1 text-2xl font-semibold text-gray-900">{formatQty(totalPlannedQty)}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-xs font-medium text-gray-500">History Avg</p>
-          <p className="mt-1 text-2xl font-semibold text-gray-900">{formatQty(totalHistoryQty)}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-xs font-medium text-gray-500">Items</p>
-          <p className="mt-1 text-2xl font-semibold text-gray-900">{items.length}</p>
-        </Card>
-      </div>
+      <Section>
+        <KpiStrip
+          items={[
+          { label: 'Planned Qty', value: formatQty(totalPlannedQty) },
+          { label: 'History Avg', value: formatQty(totalHistoryQty) },
+          { label: 'Items', value: items.length },
+          ...(blockedItems.length > 0
+            ? [{ label: 'Blocked', value: blockedItems.length, tone: 'warning' as const }]
+            : []),
+        ]}
+        />
+      </Section>
 
-      <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">
-        <Search className="h-4 w-4 shrink-0 text-gray-400" />
+      {!loading && !error && blockedItems.length > 0 && (
+        <Section>
+          <AttentionFeed
+          title="Needs Attention"
+          items={blockedItems.map((item) => {
+            const missingProductionUnit = item.production_unit === 'Unassigned';
+            return {
+              severity: missingProductionUnit ? 'blocking' : 'warning',
+              title: item.item_name || item.item_code,
+              detail: missingProductionUnit
+                ? 'No production unit assigned'
+                : 'No comparable sales history for this weekday',
+              action: {
+                label: 'View item',
+                onClick: () => focusItemRow(item.item_code),
+              },
+            };
+          })}
+          />
+        </Section>
+      )}
+
+      <Section>
+        <div className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 shadow-sm">
+        <Search className="h-4 w-4 shrink-0 text-text-tertiary" />
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search item, department, or production unit"
-          className="h-8 flex-1 border-none bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400"
+          className="h-8 flex-1 border-none bg-transparent text-sm text-foreground outline-none placeholder:text-text-tertiary"
         />
-      </div>
+        </div>
+      </Section>
 
       {loading ? (
-        <div className="flex items-center justify-center rounded-lg border border-gray-200 bg-white py-16">
+        <Section>
+          <div className="flex items-center justify-center rounded-lg border border-border bg-card py-16">
           <Spinner className="h-8 w-8 text-primary" />
-        </div>
+          </div>
+        </Section>
       ) : error ? (
-        <Card className="border-red-200 bg-red-50 p-6 text-sm text-red-700">{error}</Card>
+        <Section>
+          <Card className="border-destructive-tint-border bg-destructive-tint p-6 text-sm text-destructive">{error}</Card>
+        </Section>
       ) : filteredItems.length === 0 ? (
-        <Card className="p-10 text-center text-sm text-gray-500">No comparable history items found for this plan date.</Card>
+        <Section>
+          <Card className="p-10 text-center text-sm text-text-tertiary">No comparable history items found for this plan date.</Card>
+        </Section>
       ) : (
-        <div className="space-y-5">
+        <Section>
+          <div className="space-y-5">
           {Object.entries(groupedItems).map(([department, departmentItems]) => (
-            <div key={department} className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-              <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-5 py-3">
-                <h2 className="text-sm font-semibold tracking-wide text-gray-700">{department}</h2>
-                <span className="text-xs font-medium text-gray-500">
+            <div key={department} className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+              <div className="flex items-center justify-between border-b border-border bg-muted px-5 py-3">
+                <h2 className="text-sm font-semibold tracking-wide text-muted-foreground">{department}</h2>
+                <span className="text-xs font-medium text-text-tertiary">
                   {formatQty(departmentItems.reduce((total, item) => total + item.planned_qty, 0))} planned
                 </span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[760px] text-left text-sm">
-                  <thead className="border-b border-gray-100 bg-white text-xs font-semibold text-gray-500">
+                  <thead className="border-b border-border bg-card text-xs font-semibold text-text-tertiary">
                     <tr>
                       <th className="px-5 py-3">Item</th>
                       <th className="px-5 py-3">History Insight</th>
@@ -455,20 +503,28 @@ export const SalesPlanPage: React.FC = () => {
                       <th className="px-5 py-3 text-right">Variance</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-hair">
                     {departmentItems.map((item) => {
                       const variance = getVariance(item);
                       return (
-                        <tr key={item.item_code} className="hover:bg-gray-50">
+                        <tr
+                          key={item.item_code}
+                          ref={(el) => {
+                            rowRefs.current[item.item_code] = el;
+                          }}
+                          className={`hover:bg-muted ${
+                            highlightedItemCode === item.item_code ? 'bg-warning-tint transition-colors' : ''
+                          }`}
+                        >
                           <td className="px-5 py-4">
-                            <p className="font-semibold text-gray-900">{item.item_name || item.item_code}</p>
-                            <p className="mt-0.5 text-xs text-gray-500">{item.item_code}</p>
+                            <p className="font-semibold text-foreground">{item.item_name || item.item_code}</p>
+                            <p className="mt-0.5 text-xs text-text-tertiary">{item.item_code}</p>
                           </td>
                           <td className="px-5 py-4">
                             <button
                               type="button"
                               onClick={() => setSelectedHistoryItem(item)}
-                              className="inline-flex items-center gap-2 rounded-md px-2 py-1 text-left text-primary hover:bg-blue-50"
+                              className="inline-flex items-center gap-2 rounded-md px-2 py-1 text-left text-primary hover:bg-primary-tint"
                             >
                               <History className="h-4 w-4" />
                               <span>
@@ -476,7 +532,7 @@ export const SalesPlanPage: React.FC = () => {
                               </span>
                             </button>
                           </td>
-                          <td className="px-5 py-4 text-gray-600">{item.production_unit || 'Unassigned'}</td>
+                          <td className="px-5 py-4 text-muted-foreground">{item.production_unit || 'Unassigned'}</td>
                           <td className="px-5 py-4">
                             <Input
                               aria-label={`Plan quantity for ${item.item_name || item.item_code}`}
@@ -488,7 +544,7 @@ export const SalesPlanPage: React.FC = () => {
                               className="ml-auto w-28 text-right"
                             />
                           </td>
-                          <td className={`px-5 py-4 text-right font-semibold ${variance < 0 ? 'text-orange-600' : 'text-green-700'}`}>
+                          <td className={`px-5 py-4 text-right font-semibold ${variance < 0 ? 'text-warning' : 'text-success'}`}>
                             {variance > 0 ? '+' : ''}{formatQty(variance)}
                           </td>
                         </tr>
@@ -499,11 +555,12 @@ export const SalesPlanPage: React.FC = () => {
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        </Section>
       )}
 
       <HistoryModal item={selectedHistoryItem} onClose={() => setSelectedHistoryItem(null)} />
-    </div>
+    </Page>
   );
 };
 

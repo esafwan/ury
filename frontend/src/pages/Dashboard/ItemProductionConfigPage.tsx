@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useBranchContext } from '../../context/BranchContext';
-import { Settings2, Plus } from 'lucide-react';
-import { Card, Button, Select, SelectItem, Spinner, showToast } from '@ury/ui';
+import { Plus } from 'lucide-react';
+import { Page, Section, Button, Select, SelectItem, Spinner, showToast } from '@ury/ui';
 import { SearchableSelect } from '../../components/common/SearchableSelect';
 import { dashboardService } from '../../services/dashboard';
 import { call } from '@ury/core';
@@ -228,8 +228,8 @@ export const ItemProductionConfigPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="-mx-6 px-6 -mt-6 pt-6 pb-3 border-b border-gray-200 flex flex-col md:flex-row items-center justify-end gap-4">
+    <Page>
+      <div className="flex flex-col md:flex-row items-center justify-end gap-4 pb-3 border-b border-border">
         <Button
           onClick={openAddDrawer}
           className="bg-primary hover:bg-primary/90 text-white font-semibold flex items-center space-x-1.5 shadow-xs"
@@ -239,59 +239,57 @@ export const ItemProductionConfigPage: React.FC = () => {
         </Button>
       </div>
 
-      {loading ? (
-        <div className="py-16 flex items-center justify-center bg-white rounded-lg border border-gray-200">
-          <Spinner className="w-8 h-8 text-primary" />
-        </div>
-      ) : configs.length === 0 ? (
-        <Card className="p-12 flex flex-col items-center justify-center text-center rounded-lg border border-gray-200 shadow-sm bg-white">
-          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-            <Settings2 className="w-6 h-6 text-primary" />
+      <Section>
+        {loading ? (
+          <div className="py-16 flex items-center justify-center bg-card rounded-[9px] border border-hair">
+            <Spinner className="w-8 h-8 text-primary" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">No Item Production Configurations</h3>
-          <p className="text-gray-500 mb-6 max-w-sm">
-            Map items to production units and departments to enable kitchen/bar routing.
-          </p>
-          <Button
-            onClick={openAddDrawer}
-            className="bg-primary hover:bg-primary/90 text-white font-semibold flex items-center space-x-1.5 shadow-xs"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Item Production Configuration</span>
-          </Button>
-        </Card>
-      ) : (
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden overflow-x-auto">
-          <table className="w-full text-left text-sm text-gray-600">
-            <thead className="bg-gray-50 border-b border-gray-100 text-xs text-gray-500 font-semibold">
-              <tr>
-                <th className="px-6 py-4">Item</th>
-                <th className="px-6 py-4">Branch</th>
-                <th className="px-6 py-4">Department</th>
-                <th className="px-6 py-4">Production Unit</th>
-                <th className="px-6 py-4">Policy</th>
-                <th className="px-6 py-4">Active</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {configs.map((config) => (
-                <tr
-                  key={config.name}
-                  className="transition-colors cursor-pointer hover:bg-gray-50"
-                  onClick={() => openEditDrawer(config)}
-                >
-                  <td className="px-6 py-4 font-semibold text-gray-900">{config.item}</td>
-                  <td className="px-6 py-4">{config.branch}</td>
-                  <td className="px-6 py-4">{config.department || '-'}</td>
-                  <td className="px-6 py-4">{config.production_unit || '-'}</td>
-                  <td className="px-6 py-4">{config.production_policy || '-'}</td>
-                  <td className="px-6 py-4">{config.active ? 'Yes' : 'No'}</td>
+        ) : configs.length === 0 ? (
+          <div className="px-4 py-[18px] text-xs text-text-tertiary flex items-center gap-2.5 bg-card border border-hair rounded-[9px]">
+            <span>Map items to production units and departments to enable kitchen/bar routing.</span>
+            <Button
+              onClick={openAddDrawer}
+              variant="chrome"
+              size="compactSm"
+              className="ml-auto"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Config</span>
+            </Button>
+          </div>
+        ) : (
+          <div className="bg-card border border-hair rounded-[9px] overflow-hidden overflow-x-auto">
+            <table className="w-full text-left text-sm text-muted-foreground">
+              <thead className="border-b border-hair">
+                <tr>
+                  <th className="px-[14px] py-[7px] text-[11px] font-medium text-text-tertiary text-left">Item</th>
+                  <th className="px-[14px] py-[7px] text-[11px] font-medium text-text-tertiary text-left">Branch</th>
+                  <th className="px-[14px] py-[7px] text-[11px] font-medium text-text-tertiary text-left">Department</th>
+                  <th className="px-[14px] py-[7px] text-[11px] font-medium text-text-tertiary text-left">Production Unit</th>
+                  <th className="px-[14px] py-[7px] text-[11px] font-medium text-text-tertiary text-left">Policy</th>
+                  <th className="px-[14px] py-[7px] text-[11px] font-medium text-text-tertiary text-center">Active</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody className="divide-y divide-hair">
+                {configs.map((config) => (
+                  <tr
+                    key={config.name}
+                    className="transition-colors cursor-pointer hover:bg-muted"
+                    onClick={() => openEditDrawer(config)}
+                  >
+                    <td className="px-[14px] py-2 text-[12.5px] font-semibold text-foreground">{config.item}</td>
+                    <td className="px-[14px] py-2 text-[12.5px]">{config.branch}</td>
+                    <td className="px-[14px] py-2 text-[12.5px]">{config.department || '-'}</td>
+                    <td className="px-[14px] py-2 text-[12.5px]">{config.production_unit || '-'}</td>
+                    <td className="px-[14px] py-2 text-[12.5px]">{config.production_policy || '-'}</td>
+                    <td className="px-[14px] py-2 text-[12.5px] text-center">{config.active ? 'Yes' : 'No'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Section>
 
       <SideDrawer
         isOpen={isDrawerOpen}
@@ -300,7 +298,7 @@ export const ItemProductionConfigPage: React.FC = () => {
       >
         <form onSubmit={handleSave} className="space-y-4 text-sm">
           <div>
-            <label className="block font-semibold text-gray-700 mb-1">Item</label>
+            <label className="block font-semibold text-muted-foreground mb-1">Item</label>
             <SearchableSelect
               id="item"
               value={form.item}
@@ -312,7 +310,7 @@ export const ItemProductionConfigPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-700 mb-1">Branch</label>
+            <label className="block font-semibold text-muted-foreground mb-1">Branch</label>
             <SearchableSelect
               id="branch"
               value={form.branch}
@@ -324,7 +322,7 @@ export const ItemProductionConfigPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-700 mb-1">Department</label>
+            <label className="block font-semibold text-muted-foreground mb-1">Department</label>
             <SearchableSelect
               id="department"
               value={form.department}
@@ -336,7 +334,7 @@ export const ItemProductionConfigPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-700 mb-1">Production Unit</label>
+            <label className="block font-semibold text-muted-foreground mb-1">Production Unit</label>
             <SearchableSelect
               id="production_unit"
               value={form.production_unit}
@@ -348,7 +346,7 @@ export const ItemProductionConfigPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-700 mb-1">Production Policy</label>
+            <label className="block font-semibold text-muted-foreground mb-1">Production Policy</label>
             <Select
               value={form.production_policy}
               onChange={(e) => setForm({ ...form, production_policy: e.target.value })}
@@ -361,7 +359,7 @@ export const ItemProductionConfigPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-700 mb-1">BOM</label>
+            <label className="block font-semibold text-muted-foreground mb-1">BOM</label>
             <SearchableSelect
               id="bom"
               value={form.bom}
@@ -369,13 +367,13 @@ export const ItemProductionConfigPage: React.FC = () => {
               options={form.bom ? [{ value: form.bom, label: form.bom }] : []}
               placeholder="Enter BOM name (optional)"
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-text-tertiary mt-1">
               BOM must belong to the selected Item.
             </p>
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-700 mb-1">Availability Mode</label>
+            <label className="block font-semibold text-muted-foreground mb-1">Availability Mode</label>
             <Select
               value={form.availability_mode}
               onChange={(e) => setForm({ ...form, availability_mode: e.target.value })}
@@ -388,7 +386,7 @@ export const ItemProductionConfigPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-700 mb-1">Direct Retail Warehouse</label>
+            <label className="block font-semibold text-muted-foreground mb-1">Direct Retail Warehouse</label>
             <SearchableSelect
               id="direct_retail_warehouse"
               value={form.direct_retail_warehouse}
@@ -405,9 +403,9 @@ export const ItemProductionConfigPage: React.FC = () => {
               id="active"
               checked={form.active}
               onChange={(e) => setForm({ ...form, active: e.target.checked })}
-              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
             />
-            <label htmlFor="active" className="font-semibold text-gray-700">Active</label>
+            <label htmlFor="active" className="font-semibold text-muted-foreground">Active</label>
           </div>
 
           <div className="flex items-center gap-2">
@@ -422,9 +420,9 @@ export const ItemProductionConfigPage: React.FC = () => {
                   allow_over_plan_sale: e.target.checked ? form.allow_over_plan_sale : false,
                 })
               }
-              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
             />
-            <label htmlFor="controlled_by_sales_plan" className="font-semibold text-gray-700">
+            <label htmlFor="controlled_by_sales_plan" className="font-semibold text-muted-foreground">
               Controlled by Sales Plan
             </label>
           </div>
@@ -436,15 +434,15 @@ export const ItemProductionConfigPage: React.FC = () => {
                 id="allow_over_plan_sale"
                 checked={form.allow_over_plan_sale}
                 onChange={(e) => setForm({ ...form, allow_over_plan_sale: e.target.checked })}
-                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
               />
-              <label htmlFor="allow_over_plan_sale" className="font-semibold text-gray-700">
+              <label htmlFor="allow_over_plan_sale" className="font-semibold text-muted-foreground">
                 Allow Over-Plan Sale
               </label>
             </div>
           )}
 
-          <div className="pt-6 flex justify-end gap-2 border-t mt-4 border-gray-100">
+          <div className="pt-6 flex justify-end gap-2 border-t mt-4 border-border">
             <Button type="button" variant="outline" onClick={() => setIsDrawerOpen(false)} disabled={saving}>
               Cancel
             </Button>
@@ -461,7 +459,7 @@ export const ItemProductionConfigPage: React.FC = () => {
           </div>
         </form>
       </SideDrawer>
-    </div>
+    </Page>
   );
 };
 

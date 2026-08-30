@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Card, Spinner } from '@ury/ui';
+import { KpiStrip, Page, Panel, Section, Spinner } from '@ury/ui';
 import { useBranchContext } from '../../context/BranchContext';
 import {
   BaselineStats,
@@ -207,107 +207,118 @@ export const DashboardPage: React.FC = () => {
   const dailyPnlStatusLabel = dailyPnl?.exists ? formatCurrency(dailyPnlNetProfit) : 'Not yet generated';
 
   return (
-    <div className="space-y-6">
+    <Page>
       <div>
-        <h1 className="text-xl font-semibold text-gray-900">Service Board — {formatHeaderDate(today)}</h1>
+        <h1 className="text-xl font-semibold text-foreground">Service Board — {formatHeaderDate(today)}</h1>
       </div>
 
       {loading ? (
-        <Card className="flex items-center justify-center p-10">
-          <Spinner />
-        </Card>
+        <Section>
+          <Panel className="flex items-center justify-center p-10">
+            <Spinner />
+          </Panel>
+        </Section>
       ) : error ? (
-        <Card className="border-red-200 bg-red-50 p-6 text-sm text-red-700">{error}</Card>
+        <Section>
+          <Panel pad className="border-destructive-tint-border bg-destructive-tint text-sm text-destructive">
+            {error}
+          </Panel>
+        </Section>
       ) : (
         <>
-          <Card className="p-4">
-            <p className="text-sm text-gray-700">{buildSummaryLine(needsAttention)}</p>
-          </Card>
+          <Section>
+            <Panel pad>
+              <p className="text-sm text-muted-foreground">{buildSummaryLine(needsAttention)}</p>
+            </Panel>
+          </Section>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Card className="p-4">
-              <p className="text-xs font-medium text-gray-500">Today's Sales</p>
-              <p className="mt-1 text-2xl font-semibold text-gray-900">{todaysSalesLabel}</p>
-            </Card>
-            <Card className="p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-medium text-gray-500">Daily P&amp;L</p>
-                {cancelledCount > 0 ? (
-                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                    {cancelledCount} cancelled
-                  </span>
-                ) : null}
+          <Section>
+            <KpiStrip
+              items={[
+                {
+                  label: "Today's Sales",
+                  value: todaysSalesLabel,
+                },
+                {
+                  label: "Daily P&L",
+                  value: dailyPnlStatusLabel,
+                  hint: cancelledCount > 0 ? `${cancelledCount} cancelled` : undefined,
+                },
+                {
+                  label: "Vs. Baseline",
+                  value: vsBaseline,
+                },
+                {
+                  label: "Plan Status",
+                  value: planStatusLabel,
+                },
+              ]}
+            />
+          </Section>
+
+          <Section>
+            <Link
+              to="/reports/daily-pnl"
+              className="text-xs font-medium text-primary hover:text-primary hover:underline"
+            >
+              View Daily P&amp;L report
+            </Link>
+          </Section>
+
+          <Section>
+            <Panel pad>
+              <div className="mb-sect flex items-center gap-[9px]">
+                <h2 className="text-[12.5px] font-semibold">Needs Attention</h2>
+                <span className="text-[11.5px] text-text-tertiary">{needsAttention.length}</span>
               </div>
-              <p className="mt-1 text-2xl font-semibold text-gray-900">{dailyPnlStatusLabel}</p>
-              <Link
-                to="/reports/daily-pnl"
-                className="mt-1 inline-block text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline"
-              >
-                View Daily P&amp;L report
-              </Link>
-            </Card>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Card className="p-4">
-              <p className="text-xs font-medium text-gray-500">Vs. Baseline</p>
-              <p className="mt-1 text-2xl font-semibold text-gray-900">{vsBaseline}</p>
-            </Card>
-            <Card className="p-4">
-              <p className="text-xs font-medium text-gray-500">Plan Status</p>
-              <p className="mt-1 text-2xl font-semibold text-gray-900">{planStatusLabel}</p>
-            </Card>
-          </div>
-
-          <Card className="p-4">
-            <p className="text-sm font-medium text-gray-700">Needs Attention</p>
-            {needsAttention.length === 0 ? (
-              <p className="mt-2 text-sm text-gray-500">
-                No issues right now — service is running smoothly.
-              </p>
-            ) : (
-              <ul className="mt-3 divide-y divide-gray-100">
-                {needsAttention.map((item, index) => {
-                  const target = getAttentionLinkTarget(item);
-                  const countLabel = referenceCountLabel(item);
-                  return (
-                    <li
-                      key={`${item.type}-${index}`}
-                      className="flex flex-col gap-1 py-3 sm:flex-row sm:items-center sm:justify-between"
-                    >
-                      <div>
-                        <p className="text-sm text-gray-800">
-                          {item.message}
-                          {countLabel ? <span className="text-gray-400"> · {countLabel}</span> : null}
-                        </p>
-                        {target?.note ? <p className="mt-0.5 text-xs text-gray-400">{target.note}</p> : null}
-                      </div>
-                      {target ? (
-                        target.kind === 'internal' ? (
-                          <Link
-                            to={target.to}
-                            className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
-                          >
-                            {target.label}
-                          </Link>
-                        ) : (
-                          <a
-                            href={target.to}
-                            className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
-                          >
-                            {target.label}
-                          </a>
-                        )
-                      ) : null}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </Card>
+              {needsAttention.length === 0 ? (
+                <div className="flex items-center gap-2.5 p-[18px_16px] text-xs text-text-tertiary">
+                  No issues right now — service is running smoothly.
+                </div>
+              ) : (
+                <ul className="divide-y divide-hair">
+                  {needsAttention.map((item, index) => {
+                    const target = getAttentionLinkTarget(item);
+                    const countLabel = referenceCountLabel(item);
+                    return (
+                      <li
+                        key={`${item.type}-${index}`}
+                        className="flex flex-col gap-1 py-3 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div>
+                          <p className="text-sm text-foreground">
+                            {item.message}
+                            {countLabel ? <span className="text-text-tertiary"> · {countLabel}</span> : null}
+                          </p>
+                          {target?.note ? <p className="mt-0.5 text-xs text-text-tertiary">{target.note}</p> : null}
+                        </div>
+                        {target ? (
+                          target.kind === 'internal' ? (
+                            <Link
+                              to={target.to}
+                              className="text-sm font-medium text-primary hover:text-primary hover:underline"
+                            >
+                              {target.label}
+                            </Link>
+                          ) : (
+                            <a
+                              href={target.to}
+                              className="text-sm font-medium text-primary hover:text-primary hover:underline"
+                            >
+                              {target.label}
+                            </a>
+                          )
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </Panel>
+          </Section>
         </>
       )}
-    </div>
+    </Page>
   );
 };
 

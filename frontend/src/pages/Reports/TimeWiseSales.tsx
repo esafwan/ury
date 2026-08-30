@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { call, formatCurrency } from '@ury/core';
-import { StatCard, DataTable, type DataTableColumn, Select, Input } from '@ury/ui';
-import { IndianRupee, Receipt, TrendingUp, Trophy } from 'lucide-react';
+import { KpiStrip, DataTable, type DataTableColumn, Select, Input, Page, Section } from '@ury/ui';
 import { useBranchContext } from '../../context/BranchContext';
 import { BarChartCard } from '../../components/reports/charts/BarChartCard';
 import { toApiDate } from '../../lib/reportDate';
@@ -71,7 +70,7 @@ export function TimeWiseSales() {
   }, [fetchData]);
 
   return (
-    <div className="space-y-6">
+    <Page>
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-semibold">Time Wise Sales</h1>
@@ -100,50 +99,49 @@ export function TimeWiseSales() {
       </div>
 
       {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
+        <Section>
+          <div className="rounded-md border border-destructive-tint-border bg-destructive-tint px-4 py-3 text-sm text-destructive">
+            {error}
+          </div>
+        </Section>
       )}
 
       {isLoading && !data ? (
-        <div className="text-sm text-muted-foreground">Loading...</div>
+        <Section>
+          <div className="text-sm text-muted-foreground">Loading...</div>
+        </Section>
       ) : data ? (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard
-              label="Total Sales"
-              value={formatCurrency(data.summary.total_sales)}
-              icon={<IndianRupee className="w-4 h-4" />}
+          <Section>
+            <KpiStrip
+              items={[
+                { label: 'Total Sales', value: formatCurrency(data.summary.total_sales) },
+                { label: 'Total Bills', value: data.summary.total_bills },
+                { label: 'Avg / Bill', value: formatCurrency(data.summary.avg_sale_per_bill) },
+                {
+                  label: 'Peak Interval',
+                  value: data.summary.peak_interval ?? '—',
+                  hint: data.summary.peak_interval ? formatCurrency(data.summary.peak_interval_sales) : undefined,
+                },
+              ]}
             />
-            <StatCard label="Total Bills" value={data.summary.total_bills} icon={<Receipt className="w-4 h-4" />} />
-            <StatCard
-              label="Avg / Bill"
-              value={formatCurrency(data.summary.avg_sale_per_bill)}
-              icon={<TrendingUp className="w-4 h-4" />}
-            />
-            <StatCard
-              label="Peak Interval"
-              value={data.summary.peak_interval ?? '—'}
-              delta={
-                data.summary.peak_interval
-                  ? { value: formatCurrency(data.summary.peak_interval_sales), direction: 'up' }
-                  : undefined
-              }
-              icon={<Trophy className="w-4 h-4" />}
-            />
-          </div>
+          </Section>
 
-          <BarChartCard
-            title="Sales by Time of Day"
-            data={data.intervals}
-            xKey="interval_label"
-            yKeys={['sales']}
-            labels={{ sales: 'Sales' }}
-          />
+          <Section>
+            <BarChartCard
+              title="Sales by Time of Day"
+              data={data.intervals}
+              xKey="interval_label"
+              yKeys={['sales']}
+              labels={{ sales: 'Sales' }}
+            />
+          </Section>
 
-          <DataTable columns={columns} rows={data.intervals} isLoading={isLoading} />
+          <Section>
+            <DataTable columns={columns} rows={data.intervals} isLoading={isLoading} />
+          </Section>
         </>
       ) : null}
-    </div>
+    </Page>
   );
 }

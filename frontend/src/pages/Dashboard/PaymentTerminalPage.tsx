@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Spinner } from '@ury/ui';
-import { call } from '@ury/core';
+import { Page, Section, Panel, Badge, Spinner } from '@ury/ui';
 import {
   paymentTerminalService,
   PaymentTerminal,
@@ -23,29 +22,29 @@ const formatCurrency = (value?: number) => {
   }).format(value);
 };
 
-const getStatusBadgeClass = (status: string) => {
+const getStatusBadgeVariant = (status: string) => {
   switch (status) {
     case 'Idle':
-      return 'inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800';
+      return 'tagSuccess' as const;
     case 'Busy':
-      return 'inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800';
+      return 'tagWarning' as const;
     case 'Offline':
-      return 'inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800';
+      return 'tagDestructive' as const;
     default:
-      return 'inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800';
+      return 'cancelled' as const;
   }
 };
 
-const getTransactionStatusBadgeClass = (status: string) => {
+const getTransactionStatusBadgeVariant = (status: string) => {
   switch (status) {
     case 'Success':
-      return 'inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800';
+      return 'tagSuccess' as const;
     case 'Failed':
-      return 'inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800';
+      return 'tagDestructive' as const;
     case 'Pending':
-      return 'inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800';
+      return 'tagWarning' as const;
     default:
-      return 'inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800';
+      return 'cancelled' as const;
   }
 };
 
@@ -131,22 +130,23 @@ const PaymentTerminalContent: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="-mx-6 -mt-6 border-b border-gray-200 px-6 pb-4 pt-6">
-        <h1 className="text-xl font-semibold text-gray-900">Payment Terminals</h1>
-        <p className="mt-1 text-sm text-gray-500">
+    <Page>
+      <div>
+        <h1 className="text-xl font-semibold text-foreground">Payment Terminals</h1>
+        <p className="mt-1 text-sm text-text-tertiary">
           Register and manage payment terminal devices. Monitor terminal status and view transaction history.
         </p>
       </div>
 
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Register New Terminal</h2>
-        <Card className="p-6">
+      <Section>
+        <div>
+          <h2 className="text-lg font-semibold text-foreground mb-4">Register New Terminal</h2>
+          <Panel pad>
           <form onSubmit={handleCreateTerminal} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-700 mb-1">
-                  Terminal ID <span className="text-red-500">*</span>
+                <label className="text-sm font-medium text-muted-foreground mb-1">
+                  Terminal ID <span className="text-destructive">*</span>
                 </label>
                 <input
                   type="text"
@@ -155,13 +155,13 @@ const PaymentTerminalContent: React.FC = () => {
                     setFormData({ ...formData, terminal_id: e.target.value })
                   }
                   placeholder="e.g., TERM-001"
-                  className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+                  className="rounded-md border border-border px-3 py-2 text-sm text-foreground placeholder-text-tertiary focus:border-primary focus:outline-none"
                   disabled={createLoading}
                 />
               </div>
 
               <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-700 mb-1">
+                <label className="text-sm font-medium text-muted-foreground mb-1">
                   Device
                 </label>
                 <input
@@ -171,13 +171,13 @@ const PaymentTerminalContent: React.FC = () => {
                     setFormData({ ...formData, device: e.target.value })
                   }
                   placeholder="e.g., Ingenico iCT2X0"
-                  className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+                  className="rounded-md border border-border px-3 py-2 text-sm text-foreground placeholder-text-tertiary focus:border-primary focus:outline-none"
                   disabled={createLoading}
                 />
               </div>
 
               <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-700 mb-1">
+                <label className="text-sm font-medium text-muted-foreground mb-1">
                   Provider
                 </label>
                 <select
@@ -185,7 +185,7 @@ const PaymentTerminalContent: React.FC = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, provider: e.target.value })
                   }
-                  className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
+                  className="rounded-md border border-border px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
                   disabled={createLoading}
                 >
                   {PROVIDERS.map((p) => (
@@ -200,7 +200,7 @@ const PaymentTerminalContent: React.FC = () => {
                 <button
                   type="submit"
                   disabled={createLoading}
-                  className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {createLoading ? 'Creating...' : 'Register Terminal'}
                 </button>
@@ -208,33 +208,37 @@ const PaymentTerminalContent: React.FC = () => {
             </div>
 
             {createError && (
-              <div className="text-sm text-red-700 bg-red-50 rounded-md p-3">
+              <div className="text-sm text-destructive bg-destructive-tint rounded-md p-3">
                 {createError}
               </div>
             )}
           </form>
-        </Card>
-      </div>
+          </Panel>
+        </div>
+      </Section>
 
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Registered Terminals</h2>
-        {loading ? (
-          <div className="flex items-center justify-center rounded-lg border border-gray-200 bg-white py-16">
-            <Spinner className="h-8 w-8 text-primary" />
-          </div>
-        ) : error ? (
-          <Card className="border-red-200 bg-red-50 p-6 text-sm text-red-700">
-            {error}
-          </Card>
-        ) : terminals.length === 0 ? (
-          <Card className="p-8 text-center text-sm text-gray-500">
-            No payment terminals registered yet. Create one using the form above.
-          </Card>
-        ) : (
-          <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+      <Section>
+        <div>
+          <h2 className="text-lg font-semibold text-foreground mb-4">Registered Terminals</h2>
+          {loading ? (
+            <div className="flex items-center justify-center rounded-lg border border-border bg-card py-16">
+              <Spinner className="h-8 w-8 text-primary" />
+            </div>
+          ) : error ? (
+            <Panel className="border-destructive-tint-border bg-destructive-tint text-sm text-destructive" pad>
+              {error}
+            </Panel>
+          ) : terminals.length === 0 ? (
+            <Panel pad>
+              <div className="text-center text-sm text-text-tertiary">
+                No payment terminals registered yet. Create one using the form above.
+              </div>
+            </Panel>
+          ) : (
+          <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
-                <thead className="border-b border-gray-100 bg-gray-50 text-xs font-semibold text-gray-500">
+                <thead className="border-b border-border bg-muted text-xs font-semibold text-text-tertiary">
                   <tr>
                     <th className="px-4 py-3">Terminal ID</th>
                     <th className="px-4 py-3">Device</th>
@@ -243,24 +247,24 @@ const PaymentTerminalContent: React.FC = () => {
                     <th className="px-4 py-3">Last Seen</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-border">
                   {terminals.map((terminal) => (
                     <tr key={terminal.name}>
-                      <td className="px-4 py-3 font-medium text-gray-900">
+                      <td className="px-4 py-3 font-medium text-foreground">
                         {terminal.terminal_id}
                       </td>
-                      <td className="px-4 py-3 text-gray-700">
+                      <td className="px-4 py-3 text-muted-foreground">
                         {terminal.device || '-'}
                       </td>
-                      <td className="px-4 py-3 text-gray-700">
+                      <td className="px-4 py-3 text-muted-foreground">
                         {terminal.provider || '-'}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={getStatusBadgeClass(terminal.status || 'Idle')}>
+                        <Badge size="tag" variant={getStatusBadgeVariant(terminal.status || 'Idle')}>
                           {terminal.status || 'Idle'}
-                        </span>
+                        </Badge>
                       </td>
-                      <td className="px-4 py-3 text-gray-600 text-xs">
+                      <td className="px-4 py-3 text-muted-foreground text-xs">
                         {formatDateTime(terminal.last_seen)}
                       </td>
                     </tr>
@@ -270,23 +274,27 @@ const PaymentTerminalContent: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
+        </div>
+      </Section>
 
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Transaction Log</h2>
-        {transactionLoading ? (
-          <div className="flex items-center justify-center rounded-lg border border-gray-200 bg-white py-16">
-            <Spinner className="h-8 w-8 text-primary" />
-          </div>
-        ) : transactions.length === 0 ? (
-          <Card className="p-8 text-center text-sm text-gray-500">
-            No transactions recorded yet.
-          </Card>
-        ) : (
-          <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+      <Section>
+        <div>
+          <h2 className="text-lg font-semibold text-foreground mb-4">Transaction Log</h2>
+          {transactionLoading ? (
+            <div className="flex items-center justify-center rounded-lg border border-border bg-card py-16">
+              <Spinner className="h-8 w-8 text-primary" />
+            </div>
+          ) : transactions.length === 0 ? (
+            <Panel pad>
+              <div className="text-center text-sm text-text-tertiary">
+                No transactions recorded yet.
+              </div>
+            </Panel>
+          ) : (
+          <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
-                <thead className="border-b border-gray-100 bg-gray-50 text-xs font-semibold text-gray-500">
+                <thead className="border-b border-border bg-muted text-xs font-semibold text-text-tertiary">
                   <tr>
                     <th className="px-4 py-3">Terminal</th>
                     <th className="px-4 py-3">Invoice</th>
@@ -295,24 +303,24 @@ const PaymentTerminalContent: React.FC = () => {
                     <th className="px-4 py-3">Created</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-border">
                   {transactions.map((tx) => (
                     <tr key={tx.name}>
-                      <td className="px-4 py-3 font-medium text-gray-900 font-mono text-xs">
+                      <td className="px-4 py-3 font-medium text-foreground font-mono text-xs">
                         {tx.terminal || '-'}
                       </td>
-                      <td className="px-4 py-3 text-gray-700 font-mono text-xs">
+                      <td className="px-4 py-3 text-muted-foreground font-mono text-xs">
                         {tx.invoice || '-'}
                       </td>
-                      <td className="px-4 py-3 text-right text-gray-700">
+                      <td className="px-4 py-3 text-right text-muted-foreground">
                         {formatCurrency(tx.amount)}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={getTransactionStatusBadgeClass(tx.status || 'Pending')}>
+                        <Badge size="tag" variant={getTransactionStatusBadgeVariant(tx.status || 'Pending')}>
                           {tx.status || 'Pending'}
-                        </span>
+                        </Badge>
                       </td>
-                      <td className="px-4 py-3 text-gray-600 text-xs">
+                      <td className="px-4 py-3 text-muted-foreground text-xs">
                         {formatDateTime(tx.created_at)}
                       </td>
                     </tr>
@@ -322,8 +330,9 @@ const PaymentTerminalContent: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
-    </div>
+        </div>
+      </Section>
+    </Page>
   );
 };
 

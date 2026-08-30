@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { call, formatCurrency } from '@ury/core';
-import { StatCard, DataTable, type DataTableColumn, Select } from '@ury/ui';
-import { IndianRupee, TrendingUp, Trophy, TrendingDown } from 'lucide-react';
+import { KpiStrip, DataTable, type DataTableColumn, Select, Page, Section } from '@ury/ui';
 import { useBranchContext } from '../../context/BranchContext';
 import { BarChartCard } from '../../components/reports/charts/BarChartCard';
 
@@ -73,7 +72,7 @@ export function MonthWiseSales() {
   }, [fetchData]);
 
   return (
-    <div className="space-y-6">
+    <Page>
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-semibold">Month Wise Sales</h1>
@@ -94,45 +93,45 @@ export function MonthWiseSales() {
       </div>
 
       {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
+        <Section>
+          <div className="rounded-md border border-destructive-tint-border bg-destructive-tint px-4 py-3 text-sm text-destructive">
+            {error}
+          </div>
+        </Section>
       )}
 
       {isLoading && !data ? (
-        <div className="text-sm text-muted-foreground">Loading...</div>
+        <Section>
+          <div className="text-sm text-muted-foreground">Loading...</div>
+        </Section>
       ) : data ? (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard
-              label="Total Revenue"
-              value={formatCurrency(data.summary.total_revenue)}
-              icon={<IndianRupee className="w-4 h-4" />}
+          <Section>
+            <KpiStrip
+              items={[
+                { label: 'Total Revenue', value: formatCurrency(data.summary.total_revenue) },
+                { label: 'Avg Monthly', value: formatCurrency(data.summary.average_monthly_revenue) },
+                { label: 'Best Month', value: data.summary.best_month ?? '—' },
+                { label: 'Weakest Month', value: data.summary.worst_month ?? '—' },
+              ]}
             />
-            <StatCard
-              label="Avg Monthly"
-              value={formatCurrency(data.summary.average_monthly_revenue)}
-              icon={<TrendingUp className="w-4 h-4" />}
-            />
-            <StatCard label="Best Month" value={data.summary.best_month ?? '—'} icon={<Trophy className="w-4 h-4" />} />
-            <StatCard
-              label="Weakest Month"
-              value={data.summary.worst_month ?? '—'}
-              icon={<TrendingDown className="w-4 h-4" />}
-            />
-          </div>
+          </Section>
 
-          <BarChartCard
-            title="Monthly Grand Total"
-            data={data.data}
-            xKey="month"
-            yKeys={['grand_total']}
-            labels={{ grand_total: 'Grand Total' }}
-          />
+          <Section>
+            <BarChartCard
+              title="Monthly Grand Total"
+              data={data.data}
+              xKey="month"
+              yKeys={['grand_total']}
+              labels={{ grand_total: 'Grand Total' }}
+            />
+          </Section>
 
-          <DataTable columns={columns} rows={data.data} isLoading={isLoading} />
+          <Section>
+            <DataTable columns={columns} rows={data.data} isLoading={isLoading} />
+          </Section>
         </>
       ) : null}
-    </div>
+    </Page>
   );
 }

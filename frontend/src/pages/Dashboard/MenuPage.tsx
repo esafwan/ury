@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useBranchContext } from '../../context/BranchContext';
 import { Utensils, Search, Plus, LayoutGrid, List, Edit2, Check, X } from 'lucide-react';
-import { Card, Button, Badge, Input, Spinner, showToast, Select } from '@ury/ui';
+import { Badge, Button, Input, Spinner, showToast, Select } from '@ury/ui';
 import { formatCurrency, call } from '@ury/core';
 import { dashboardService } from '../../services/dashboard';
 import SideDrawer from '../../components/layout/SideDrawer';
@@ -335,10 +335,10 @@ export const MenuPage: React.FC = () => {
   return (
     <div className="space-y-4 max-w-[1600px] mx-auto">
       {/* Page Heading */}
-      <h1 className="text-xl font-semibold text-gray-900">Menu</h1>
+      <h1 className="text-xl font-semibold text-foreground">Menu</h1>
 
       {/* Section: Menu Selector — Partition Style */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 pb-3 border-b border-gray-200 -mx-6 px-6 -mt-6 pt-6">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 pb-3 border-b border-border -mx-6 px-6 -mt-6 pt-6">
         <div className="flex items-center gap-3 w-full md:w-auto">
           <div className="w-full sm:w-48">
             <SearchableSelect
@@ -363,16 +363,16 @@ export const MenuPage: React.FC = () => {
             />
           </div>
 
-          <div className="flex items-center bg-gray-100 p-1 rounded-lg shrink-0">
+          <div className="flex items-center bg-muted p-1 rounded-lg shrink-0">
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-md transition-all flex items-center justify-center ${viewMode === 'grid' ? 'bg-white shadow-sm text-primary' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`p-1.5 rounded-md transition-all flex items-center justify-center ${viewMode === 'grid' ? 'bg-card shadow-sm text-primary' : 'text-text-tertiary hover:text-muted-foreground'}`}
             >
               <LayoutGrid className="w-4 h-4" />
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded-md transition-all flex items-center justify-center ${viewMode === 'list' ? 'bg-white shadow-sm text-primary' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`p-1.5 rounded-md transition-all flex items-center justify-center ${viewMode === 'list' ? 'bg-card shadow-sm text-primary' : 'text-text-tertiary hover:text-muted-foreground'}`}
             >
               <List className="w-4 h-4" />
             </button>
@@ -381,20 +381,20 @@ export const MenuPage: React.FC = () => {
 
         <div className="flex items-center gap-3">
           <div className="relative w-full md:w-56">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary" />
             <Input
               type="text"
               placeholder="Search items..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 bg-gray-50 border-gray-200 w-full"
+              className="pl-9 bg-muted border-border w-full"
             />
           </div>
 
           <Button
             variant="outline"
             onClick={openAddCourseDrawer}
-            className="border-gray-300 text-gray-700 font-semibold flex items-center gap-1.5 whitespace-nowrap"
+            className="border-border text-muted-foreground font-semibold flex items-center gap-1.5 whitespace-nowrap"
           >
             <Plus className="w-4 h-4" />
             <span>Add Course</span>
@@ -403,7 +403,7 @@ export const MenuPage: React.FC = () => {
           <Button
             variant="outline"
             onClick={openAddMenuDrawer}
-            className="border-gray-300 text-gray-700 font-semibold flex items-center gap-1.5 whitespace-nowrap"
+            className="border-border text-muted-foreground font-semibold flex items-center gap-1.5 whitespace-nowrap"
           >
             <Plus className="w-4 h-4" />
             <span>Add Menu</span>
@@ -422,56 +422,54 @@ export const MenuPage: React.FC = () => {
 
       {/* Content Area */}
       {loading ? (
-        <div className="py-24 flex items-center justify-center bg-white rounded-lg border border-gray-100 shadow-sm">
+        <div className="py-24 flex items-center justify-center bg-card rounded-[9px] border border-hair">
           <Spinner className="w-8 h-8 text-primary" />
         </div>
       ) : filteredItems.length === 0 ? (
-        <Card className="p-16 flex flex-col items-center justify-center text-center rounded-lg border border-gray-100 shadow-sm bg-white">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-5">
-            <Utensils className="w-8 h-8 text-primary" />
-          </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">No Items Found</h3>
-          <p className="text-gray-500 mb-8 max-w-sm">
+        <div className="px-4 py-[18px] text-xs text-text-tertiary flex items-center gap-2.5 bg-card border border-hair rounded-[9px]">
+          <span>
             {search || categoryFilter !== 'all'
               ? "We couldn't find any items matching your filters."
               : 'Your menu is empty. Start adding delicious items for your customers!'}
-          </p>
+          </span>
           <Button
             onClick={openAddItemDrawer}
             disabled={menus.length === 0}
-            className="bg-primary hover:bg-primary/90 text-white font-semibold flex items-center gap-1.5 shadow-xs px-6"
+            variant="chrome"
+            size="compactSm"
+            className="ml-auto"
           >
-            <Plus className="w-4 h-4" />
-            <span>Add Menu Item</span>
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add Item</span>
           </Button>
-        </Card>
+        </div>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           {filteredItems.map((item, idx) => (
-            <div key={item.name || idx} className="bg-white rounded-lg shadow-sm overflow-hidden transition-shadow relative h-56 flex flex-col group">
+            <div key={item.name || idx} className="bg-card rounded-lg shadow-sm overflow-hidden transition-shadow relative h-56 flex flex-col group">
               <div className="h-24 w-full shrink-0">
                 {item.image ? (
                   <img src={item.image} alt={item.item_name} className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full bg-gray-200 flex items-center justify-center text-2xl text-gray-400 font-medium select-none">
+                  <div className="w-full h-full bg-muted flex items-center justify-center text-2xl text-text-tertiary font-medium select-none">
                     {(item.item_name || 'IT').slice(0, 2).toUpperCase()}
                   </div>
                 )}
               </div>
               <div className="flex-1 p-3 flex flex-col">
-                <h3 className="font-medium text-gray-900 text-sm leading-5 line-clamp-2" title={item.item_name}>
+                <h3 className="font-medium text-foreground text-sm leading-5 line-clamp-2" title={item.item_name}>
                   {item.item_name}
                 </h3>
                 <div className="h-5 mt-1">
-                  <p className="text-xs text-gray-500 truncate" title={item.course || ''}>{item.course || ' '}</p>
+                  <p className="text-xs text-text-tertiary truncate" title={item.course || ''}>{item.course || ' '}</p>
                 </div>
                 <div className="mt-auto pt-2 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-gray-900 tabular-nums">
+                  <span className="text-sm font-semibold text-foreground tabular-nums">
                     {formatCurrency(item.rate || 0)}
                   </span>
                   <button
                     onClick={(e) => { e.stopPropagation(); openEditItemDrawer(item); }}
-                    className="p-1.5 text-gray-400 hover:text-primary hover:bg-primary/5 rounded-md transition-colors -mr-1.5 -mb-1.5"
+                    className="p-1.5 text-text-tertiary hover:text-primary hover:bg-primary/5 rounded-md transition-colors -mr-1.5 -mb-1.5"
                     title="Edit Item"
                   >
                     <Edit2 className="w-4 h-4" />
@@ -482,47 +480,43 @@ export const MenuPage: React.FC = () => {
           ))}
         </div>
       ) : (
-        <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden overflow-x-auto">
-          <table className="w-full text-left text-sm text-gray-600 min-w-[600px]">
-            <thead className="bg-gray-50/80 border-b border-gray-100 text-xs text-gray-500 font-bold tracking-wider">
+        <div className="bg-card border border-hair rounded-[9px] overflow-hidden overflow-x-auto">
+          <table className="w-full text-left text-sm text-muted-foreground min-w-[600px]">
+            <thead className="border-b border-hair">
               <tr>
-                <th className="px-6 py-4">Item Name</th>
-                <th className="px-6 py-4">Course</th>
-                <th className="px-6 py-4">Standard Rate</th>
-                <th className="px-6 py-4 text-center">Special</th>
-                <th className="px-6 py-4 text-center">Disabled</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+                <th className="px-[14px] py-[7px] text-[11px] font-medium text-text-tertiary text-left">Item Name</th>
+                <th className="px-[14px] py-[7px] text-[11px] font-medium text-text-tertiary text-left">Course</th>
+                <th className="px-[14px] py-[7px] text-[11px] font-medium text-text-tertiary text-right font-mono">Standard Rate</th>
+                <th className="px-[14px] py-[7px] text-[11px] font-medium text-text-tertiary text-center">Special</th>
+                <th className="px-[14px] py-[7px] text-[11px] font-medium text-text-tertiary text-center">Disabled</th>
+                <th className="px-[14px] py-[7px] text-[11px] font-medium text-text-tertiary text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-hair">
               {filteredItems.map((item, idx) => (
-                <tr key={item.name || idx} className="transition-colors">
-                  <td className="px-6 py-4 font-semibold text-gray-900">
+                <tr key={item.name || idx} className="transition-colors hover:bg-muted">
+                  <td className="px-[14px] py-2 text-[12.5px] font-semibold text-foreground">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-md bg-gray-100 flex items-center justify-center shrink-0">
-                        <Utensils className="w-4 h-4 text-gray-400" />
+                      <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center shrink-0">
+                        <Utensils className="w-4 h-4 text-text-tertiary" />
                       </div>
                       {item.item_name}
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <Badge variant="outline" className="border-gray-200 bg-gray-50 text-gray-600 text-xs font-medium">
+                  <td className="px-[14px] py-2 text-[12.5px]">
+                    <Badge size="tag" variant="cancelled">
                       {item.course || 'None'}
                     </Badge>
                   </td>
-                  <td className="px-6 py-4 font-bold text-primary">{formatCurrency(item.rate || 0)}</td>
-                  <td className="px-6 py-4">
-                    <div className="flex justify-center">
-                      {item.special_dish ? <Check className="w-4 h-4 text-green-500" /> : <X className="w-4 h-4 text-gray-300" />}
-                    </div>
+                  <td className="px-[14px] py-2 text-[12.5px] font-mono text-right tabular-nums text-primary font-semibold">{formatCurrency(item.rate || 0)}</td>
+                  <td className="px-[14px] py-2 text-[12.5px] text-center">
+                    {item.special_dish ? <Check className="w-4 h-4 text-success inline" /> : <X className="w-4 h-4 text-text-tertiary inline" />}
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex justify-center">
-                      {item.disabled ? <Check className="w-4 h-4 text-red-500" /> : <X className="w-4 h-4 text-gray-300" />}
-                    </div>
+                  <td className="px-[14px] py-2 text-[12.5px] text-center">
+                    {item.disabled ? <Check className="w-4 h-4 text-destructive inline" /> : <X className="w-4 h-4 text-text-tertiary inline" />}
                   </td>
-                  <td className="px-6 py-4 text-right">
-                    <Button variant="ghost" size="sm" onClick={() => openEditItemDrawer(item)} className="text-gray-500 hover:text-primary">
+                  <td className="px-[14px] py-2 text-[12.5px] text-right">
+                    <Button variant="ghost" size="sm" onClick={() => openEditItemDrawer(item)} className="text-text-tertiary hover:text-primary">
                       <Edit2 className="w-4 h-4" />
                     </Button>
                   </td>
@@ -541,7 +535,7 @@ export const MenuPage: React.FC = () => {
       >
         <form onSubmit={handleSaveItem} className="space-y-5 text-sm">
           <div>
-            <label className="block font-semibold text-gray-700 mb-1.5">Target Menu <span className="text-red-500">*</span></label>
+            <label className="block font-semibold text-muted-foreground mb-1.5">Target Menu <span className="text-destructive">*</span></label>
             <SearchableSelect
               id="target_menu"
               value={newItem.target_menu}
@@ -551,7 +545,7 @@ export const MenuPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-700 mb-1.5">Item Name <span className="text-red-500">*</span></label>
+            <label className="block font-semibold text-muted-foreground mb-1.5">Item Name <span className="text-destructive">*</span></label>
             <Input
               value={newItem.item_name}
               onChange={(e) => setNewItem({ ...newItem, item_name: e.target.value })}
@@ -563,7 +557,7 @@ export const MenuPage: React.FC = () => {
           {/* Course field with inline add option */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block font-semibold text-gray-700">Course</label>
+              <label className="block font-semibold text-muted-foreground">Course</label>
               <button
                 type="button"
                 onClick={() => setNewItem({ ...newItem, is_adding_new_course: !newItem.is_adding_new_course, course: '' })}
@@ -597,7 +591,7 @@ export const MenuPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-700 mb-1.5">Standard Rate (₹) <span className="text-red-500">*</span></label>
+            <label className="block font-semibold text-muted-foreground mb-1.5">Standard Rate (₹) <span className="text-destructive">*</span></label>
             <Input
               type="number"
               value={newItem.rate}
@@ -607,7 +601,7 @@ export const MenuPage: React.FC = () => {
             />
           </div>
 
-          <div className="pt-6 flex justify-end gap-3 border-t mt-8 border-gray-100">
+          <div className="pt-6 flex justify-end gap-3 border-t mt-8 border-border">
             <Button type="button" variant="outline" onClick={closeDrawer} className="font-semibold" disabled={savingItem}>Cancel</Button>
             <Button type="submit" disabled={savingItem} className="bg-primary hover:bg-primary/90 text-white font-semibold shadow-xs flex items-center gap-2">
               {savingItem && <Spinner className="w-4 h-4" />}
@@ -625,7 +619,7 @@ export const MenuPage: React.FC = () => {
       >
         <form onSubmit={handleSaveMenu} className="space-y-5 text-sm">
           <div>
-            <label className="block font-semibold text-gray-700 mb-1.5">Menu Name <span className="text-red-500">*</span></label>
+            <label className="block font-semibold text-muted-foreground mb-1.5">Menu Name <span className="text-destructive">*</span></label>
             <Input
               value={newMenu.menu_name}
               onChange={(e) => setNewMenu({ ...newMenu, menu_name: e.target.value })}
@@ -635,7 +629,7 @@ export const MenuPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-700 mb-1.5">Branch</label>
+            <label className="block font-semibold text-muted-foreground mb-1.5">Branch</label>
             <SearchableSelect
               id="branch"
               value={newMenu.branch}
@@ -649,7 +643,7 @@ export const MenuPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-700 mb-1.5">Price List</label>
+            <label className="block font-semibold text-muted-foreground mb-1.5">Price List</label>
             <SearchableSelect
               id="price_list"
               value={newMenu.price_list}
@@ -662,7 +656,7 @@ export const MenuPage: React.FC = () => {
             />
           </div>
 
-          <div className="pt-6 flex justify-end gap-3 border-t mt-8 border-gray-100">
+          <div className="pt-6 flex justify-end gap-3 border-t mt-8 border-border">
             <Button type="button" variant="outline" onClick={closeDrawer} className="font-semibold" disabled={savingMenu}>Cancel</Button>
             <Button type="submit" disabled={savingMenu} className="bg-primary hover:bg-primary/90 text-white font-semibold shadow-xs flex items-center gap-2">
               {savingMenu && <Spinner className="w-4 h-4" />}
@@ -680,7 +674,7 @@ export const MenuPage: React.FC = () => {
       >
         <form onSubmit={handleSaveCourse} className="space-y-5 text-sm">
           <div>
-            <label className="block font-semibold text-gray-700 mb-1.5">Course Name <span className="text-red-500">*</span></label>
+            <label className="block font-semibold text-muted-foreground mb-1.5">Course Name <span className="text-destructive">*</span></label>
             <Input
               value={newCourseName}
               onChange={(e) => setNewCourseName(e.target.value)}
@@ -690,7 +684,7 @@ export const MenuPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-700 mb-1.5">Icon</label>
+            <label className="block font-semibold text-muted-foreground mb-1.5">Icon</label>
             <Select
               value={newCourseIcon}
               onChange={(e) => setNewCourseIcon(e.target.value)}
@@ -710,7 +704,7 @@ export const MenuPage: React.FC = () => {
             </Select>
           </div>
 
-          <div className="pt-6 flex justify-end gap-3 border-t mt-8 border-gray-100">
+          <div className="pt-6 flex justify-end gap-3 border-t mt-8 border-border">
             <Button type="button" variant="outline" onClick={closeDrawer} className="font-semibold" disabled={savingCourse}>Cancel</Button>
             <Button type="submit" disabled={savingCourse} className="bg-primary hover:bg-primary/90 text-white font-semibold shadow-xs flex items-center gap-2">
               {savingCourse && <Spinner className="w-4 h-4" />}

@@ -41,6 +41,7 @@ import frappe
 
 FLAG_DOCTYPE = "URY Feature Flags"
 FLAG_FIELD = "pos_stock_authority_v2"
+RESERVATION_DOCTYPE = "URY Stock Reservation"
 
 
 def is_pos_stock_authority_flag_enabled(company=None, branch=None):
@@ -135,17 +136,9 @@ def _wire_fulfilment_for_invoice(doc):
 				"production_policy",
 			)
 
-			reservation = frappe.get_all(
-				"URY Stock Reservation",
-				filters={
-					"order_ref": doc.name,
-					"top_level_item": item_code,
-					"status": "Reserved",
-				},
-				fields=["name"],
-				limit=1,
-			)
-			if not reservation:
+			reservations = _reservation_rows_for_invoice_item(doc, item_code)
+			reservation_ref = _select_reservation_ref(reservations, production_policy, item_code, kot.name)
+			if not reservation_ref:
 				frappe.log_error(
 					title="V3-73 flag-on: no reservation found",
 					message=(
@@ -166,7 +159,7 @@ def _wire_fulfilment_for_invoice(doc):
 					kot=kot.name,
 					item_code=item_code,
 					qty=qty,
-					reservation_group_ref=reservation[0].name,
+					reservation_group_ref=reservation_ref,
 					actor=frappe.session.user,
 					batch_key=f"{kot.name}:{item_code}",
 				)
@@ -175,6 +168,59 @@ def _wire_fulfilment_for_invoice(doc):
 					kot=kot.name,
 					item_code=item_code,
 					qty=qty,
-					reservation_ref=reservation[0].name,
+					reservation_ref=reservation_ref,
 					actor=frappe.session.user,
 				)
+
+
+def _reservation_rows_for_invoice_item(doc, item_code):
+	filters = {
+		"order_ref": doc.name,
+		"top_level_item": item_code,
+		"status": "Reserved",
+	}
+	branch = doc.get("branch")
+	company = doc.get("company")
+	if branch:
+		filters["branch"] = branch
+	if company:
+		filters["company"] = company
+
+	rows = frappe.get_all(
+		RESERVATION_DOCTYPE,
+		filters=filters,
+		fields=["name", "reservation_group"],
+		order_by="creation asc",
+	)
+	return rows or []
+
+
+def _select_reservation_ref(reservations, production_policy, item_code, kot_name):
+	if not reservations:
+		return None
+
+	reservation_groups = []
+	for row in reservations:
+		reservation_group = row.get("reservation_group") or row.get("name")
+		if reservation_group:
+			reservation_groups.append(reservation_group)
+
+	if production_policy == "MADE_TO_ORDER":
+		if len(set(reservation_groups)) != 1:
+			frappe.throw(
+				_("KOT {0}, item {1} maps to multiple reservation groups; fulfilment cannot be posted until the line is resolved.").format(
+					kot_name, item_code
+				),
+				frappe.ValidationError,
+			)
+		return reservation_groups[0]
+
+	if len(reservations) != 1:
+		frappe.throw(
+			_("KOT {0}, item {1} maps to multiple stock reservations; fulfilment cannot be posted until the line is resolved.").format(
+				kot_name, item_code
+			),
+			frappe.ValidationError,
+		)
+
+	return reservation_groups[0]

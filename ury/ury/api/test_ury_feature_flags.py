@@ -131,3 +131,63 @@ class TestMaybeWireFulfilmentOnSubmit(FrappeTestCase):
 
         mock_log_error.assert_called_once()
         self.assertIn("no reservation found", mock_log_error.call_args.kwargs["title"].lower())
+
+    @patch("ury.ury.api.ury_feature_flags.frappe.log_error")
+    @patch("ury.ury.api.ury_feature_flags.frappe.get_doc")
+    @patch("ury.ury.api.ury_feature_flags.frappe.get_all")
+    def test_wire_for_invoice_rejects_ambiguous_mto_reservation_binding(
+        self, mock_get_all, mock_get_doc, mock_log_error
+    ):
+        from ury.ury.api.ury_feature_flags import _wire_fulfilment_for_invoice
+
+        mock_get_all.side_effect = [
+            [frappe._dict({"name": "KOT-001"})],
+            [frappe._dict({"state": "READY"})],
+            [
+                frappe._dict({"name": "RES-1", "reservation_group": "GROUP-1"}),
+                frappe._dict({"name": "RES-2", "reservation_group": "GROUP-2"}),
+            ],
+        ]
+        mock_get_doc.return_value = frappe._dict(
+            {"kot_items": [frappe._dict({"item": "BURGER", "quantity": 2})]}
+        )
+        doc = frappe._dict({"name": "POS-INV-001", "branch": "Main Branch"})
+
+        with patch(
+            "ury.ury.api.ury_feature_flags.frappe.db.get_value",
+            return_value="MADE_TO_ORDER",
+        ):
+            _wire_fulfilment_for_invoice(doc)
+
+        mock_log_error.assert_called_once()
+        self.assertIn("multiple reservation groups", mock_log_error.call_args.kwargs["title"].lower())
+
+    @patch("ury.ury.api.ury_feature_flags.frappe.log_error")
+    @patch("ury.ury.api.ury_feature_flags.frappe.get_doc")
+    @patch("ury.ury.api.ury_feature_flags.frappe.get_all")
+    def test_wire_for_invoice_rejects_ambiguous_preproduced_reservation_rows(
+        self, mock_get_all, mock_get_doc, mock_log_error
+    ):
+        from ury.ury.api.ury_feature_flags import _wire_fulfilment_for_invoice
+
+        mock_get_all.side_effect = [
+            [frappe._dict({"name": "KOT-001"})],
+            [frappe._dict({"state": "READY"})],
+            [
+                frappe._dict({"name": "RES-1", "reservation_group": "GROUP-1"}),
+                frappe._dict({"name": "RES-2", "reservation_group": "GROUP-1"}),
+            ],
+        ]
+        mock_get_doc.return_value = frappe._dict(
+            {"kot_items": [frappe._dict({"item": "BURGER", "quantity": 2})]}
+        )
+        doc = frappe._dict({"name": "POS-INV-001", "branch": "Main Branch"})
+
+        with patch(
+            "ury.ury.api.ury_feature_flags.frappe.db.get_value",
+            return_value="PRE_PRODUCED",
+        ):
+            _wire_fulfilment_for_invoice(doc)
+
+        mock_log_error.assert_called_once()
+        self.assertIn("multiple stock reservations", mock_log_error.call_args.kwargs["title"].lower())

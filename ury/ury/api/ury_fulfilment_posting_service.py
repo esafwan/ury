@@ -19,7 +19,14 @@ import frappe
 from frappe import _
 from frappe.utils import add_to_date, flt, now, now_datetime
 
-from ury.ury.api.ury_reservation_service import RESERVED, fulfil_reservation
+from ury.ury.api.ury_reservation_service import (
+	CANCELLED as RESERVATION_CANCELLED,
+	FULFILLED as RESERVATION_FULFILLED,
+	RELEASED as RESERVATION_RELEASED,
+	RESERVED,
+	fulfil_reservation,
+	release_reservation,
+)
 
 
 INTENT_DOCTYPE = "URY Fulfilment Posting Intent"
@@ -38,6 +45,9 @@ TERMINAL_STATUSES = (POSTED, CANCELLED)
 CLAIMABLE_STATUSES = (PENDING, FAILED, POSTING)
 LEASE_MINUTES = 10
 RETRY_MINUTES = 5
+REVERSAL_REQUIRED = "REVERSAL_REQUIRED"
+POSTING_IN_PROGRESS = "POSTING_IN_PROGRESS"
+RESERVATION_STATE_MISMATCH = "RESERVATION_STATE_MISMATCH"
 
 PRE_PRODUCED = "PRE_PRODUCED"
 MADE_TO_ORDER = "MADE_TO_ORDER"
@@ -115,6 +125,14 @@ def _reservation_rows(order_ref, item_code, branch, company):
 		raise FulfilmentPostingError(
 			"RESERVATION_NOT_FOUND",
 			_("No Reserved stock reservation found for order {0}, item {1}").format(order_ref, item_code),
+		)
+	groups = {row.get("reservation_group") or row.get("name") for row in rows}
+	if len(groups) > 1:
+		raise FulfilmentPostingError(
+			"AMBIGUOUS_RESERVATION_BINDING",
+			_("KOT item {0} maps to multiple reservation groups; posting is blocked until the line is resolved").format(
+				item_code
+			),
 		)
 	return rows
 
@@ -275,6 +293,203 @@ def _intent_result(intent, idempotent=False):
 		"idempotency_key": intent.get("idempotency_key"),
 		"erpnext_stock_entry": intent.get("erpnext_stock_entry"),
 		"idempotent_replay": idempotent,
+	}
+
+
+def _reservation_group_rows(reservation_group):
+	return frappe.get_all(
+		RESERVATION_DOCTYPE,
+		filters={"reservation_group": reservation_group},
+		fields=["name", "reservation_group", "status"],
+		order_by="creation asc",
+	)
+
+
+def _cancel_reserved_group(reservation_group, reason=None):
+	rows = _reservation_group_rows(reservation_group)
+	if not rows:
+		return {
+			"reservation_group": reservation_group,
+			"status": "missing",
+			"reservation_rows": [],
+			"released": [],
+		}
+
+	statuses = {row.get("status") for row in rows}
+	if RESERVATION_FULFILLED in statuses:
+		raise FulfilmentPostingError(
+			REVERSAL_REQUIRED,
+			_(
+				"Reservation group {0} already has fulfilled rows and must be reversed explicitly before cancellation"
+			).format(reservation_group),
+		)
+	if statuses <= {RESERVATION_RELEASED, RESERVATION_CANCELLED}:
+		return {
+			"reservation_group": reservation_group,
+			"status": "already_released",
+			"reservation_rows": [row.get("name") for row in rows],
+			"released": [],
+		}
+	if statuses != {RESERVED}:
+		raise FulfilmentPostingError(
+			RESERVATION_STATE_MISMATCH,
+			_("Reservation group {0} is not uniformly Reserved and cannot be cancelled safely").format(
+				reservation_group
+			),
+		)
+
+	try:
+		released = release_reservation(reservation_group, reason=reason)
+	except frappe.ValidationError as exc:
+		rows = _reservation_group_rows(reservation_group)
+		statuses = {row.get("status") for row in rows}
+		if statuses <= {RESERVATION_RELEASED, RESERVATION_CANCELLED}:
+			return {
+				"reservation_group": reservation_group,
+				"status": "already_released",
+				"reservation_rows": [row.get("name") for row in rows],
+				"released": [],
+			}
+		if RESERVATION_FULFILLED in statuses:
+			raise FulfilmentPostingError(
+				REVERSAL_REQUIRED,
+				_(
+					"Reservation group {0} already has fulfilled rows and must be reversed explicitly before cancellation"
+				).format(reservation_group),
+			) from exc
+		raise FulfilmentPostingError(
+			"RESERVATION_RELEASE_FAILED",
+			_("Reservation group {0} could not be released safely").format(reservation_group),
+		) from exc
+
+	return {
+		"reservation_group": reservation_group,
+		"status": "released",
+		"reservation_rows": [row.get("name") for row in rows],
+		"released": released,
+	}
+
+
+def _cancel_intent_row(intent_row, reason=None, actor=None):
+	doc = frappe.get_doc(INTENT_DOCTYPE, intent_row.get("name"))
+	if doc.get("status") == CANCELLED:
+		return _intent_result(doc.as_dict(), idempotent=True)
+	if doc.get("status") == POSTED:
+		raise FulfilmentPostingError(
+			REVERSAL_REQUIRED,
+			_(
+				"Posting intent {0} already posted ERPNext stock entry {1}; use explicit reversal semantics instead of cancellation"
+			).format(doc.name, doc.get("erpnext_stock_entry") or intent_row.get("erpnext_stock_entry") or _("unknown")),
+		)
+	if doc.get("status") == POSTING and _lease_is_fresh(intent_row):
+		raise FulfilmentPostingError(
+			POSTING_IN_PROGRESS,
+			_("Posting intent {0} is currently being processed and cannot be cancelled yet").format(doc.name),
+		)
+
+	doc.status = CANCELLED
+	doc.cancelled_at = now()
+	doc.cancellation_reason = reason
+	doc.actor = actor or frappe.session.user
+	doc.leased_until = None
+	doc.lease_owner = None
+	doc.retryable = 0
+	doc.last_error = None
+	doc.save(ignore_permissions=False)
+	return _intent_result(doc.as_dict(), idempotent=False)
+
+
+@frappe.whitelist()
+def cancel_posting_intents_for_order(order_ref, reason=None, actor=None):
+	"""Cancel pending/failed posting intents and release still-reserved groups.
+
+	Already-posted/fulfilled stock is never silently unwound here. If any
+	intent has already posted ERPNext stock, or any reservation group has
+fulfilled rows, this raises `REVERSAL_REQUIRED` and leaves history intact
+so the caller can route the order through an explicit reversal/wastage
+flow.
+	"""
+	if not order_ref:
+		raise FulfilmentPostingError("MISSING_ORDER_REF", _("Order reference is required"))
+
+	reservation_rows = frappe.get_all(
+		RESERVATION_DOCTYPE,
+		filters={"order_ref": order_ref},
+		fields=["name", "reservation_group", "status"],
+		order_by="creation asc",
+	)
+	intent_rows = frappe.get_all(
+		INTENT_DOCTYPE,
+		filters={"order_ref": order_ref},
+		fields=[
+			"name",
+			"status",
+			"reservation_ref",
+			"erpnext_stock_entry",
+			"attempts",
+			"leased_until",
+		],
+		order_by="creation asc",
+	)
+
+	posted = [row for row in intent_rows if row.get("status") == POSTED]
+	if posted:
+		row = posted[0]
+		raise FulfilmentPostingError(
+			REVERSAL_REQUIRED,
+			_(
+				"Order {0} already has posted fulfilment intent {1} (Stock Entry {2}); use explicit reversal semantics instead of cancellation"
+			).format(
+				order_ref,
+				row.get("name"),
+				row.get("erpnext_stock_entry") or _("unknown"),
+			),
+		)
+
+	fulfilled_groups = sorted(
+		{
+			row.get("reservation_group") or row.get("name")
+			for row in reservation_rows
+			if row.get("status") == RESERVATION_FULFILLED
+		}
+	)
+	if fulfilled_groups:
+		raise FulfilmentPostingError(
+			REVERSAL_REQUIRED,
+			_(
+				"Order {0} has already-fulfilled reservation group(s) {1}; use explicit reversal semantics instead of cancellation"
+			).format(order_ref, ", ".join(fulfilled_groups)),
+		)
+
+	fresh_posting = [row for row in intent_rows if row.get("status") == POSTING and _lease_is_fresh(row)]
+	if fresh_posting:
+		row = fresh_posting[0]
+		raise FulfilmentPostingError(
+			POSTING_IN_PROGRESS,
+			_("Order {0} still has a posting intent in progress ({1})").format(order_ref, row.get("name")),
+		)
+
+	released_groups = []
+	for reservation_group in sorted(
+		{
+			row.get("reservation_group") or row.get("name")
+			for row in reservation_rows
+			if row.get("status") == RESERVED
+		}
+	):
+		released_groups.append(_cancel_reserved_group(reservation_group, reason=reason))
+
+	cancelled_intents = []
+	for row in intent_rows:
+		if row.get("status") in (PENDING, FAILED) or (row.get("status") == POSTING and not _lease_is_fresh(row)):
+			cancelled_intents.append(_cancel_intent_row(row, reason=reason, actor=actor))
+		elif row.get("status") == CANCELLED:
+			cancelled_intents.append(_intent_result(frappe.get_doc(INTENT_DOCTYPE, row.get("name")).as_dict(), idempotent=True))
+
+	return {
+		"order_ref": order_ref,
+		"reservation_groups": released_groups,
+		"intents": cancelled_intents,
 	}
 
 

@@ -11,6 +11,7 @@ from ury.ury_pos.api import getBranch, getBranchRoom, getRoom, posOpening
 from ury.ury.api.ury_kot_generate import kot_execute
 from ury.ury.api.ury_kot_generate import process_items_for_cancel_kot
 from ury.ury.api.ury_feature_flags import is_pos_stock_authority_flag_enabled
+from ury.ury.api.ury_fulfilment_posting_service import cancel_posting_intents_for_order
 
 from frappe import cache
 
@@ -1960,20 +1961,20 @@ def cancel_order(invoice_id, reason):
                 frappe.PermissionError,
             )
 
+    cancel_posting_intents_for_order(
+        invoice_id,
+        reason=reason,
+        actor=frappe.session.user,
+    )
+
     # Release the full merge cluster, not only the primary table and CSV partners.
     if pos_invoice.restaurant_table:
         release_merge_cluster_tables(pos_invoice.restaurant_table)
 
-    try:
-        cancel_kot(invoice_id)
-
-    except Exception as e:
-        # If an exception occurs (e.g., "kot" app not found), it will be caught here without effecting execution
-        pass
+    cancel_kot(invoice_id)
 
     # Use standard Frappe cancel workflow instead of raw SQL
     pos_invoice.db_set("cancel_reason", reason)
-    pos_invoice.cancel()
     if pos_invoice.docstatus == 1:
         # Submitted invoice: cancel through the standard document workflow so
         # on_cancel hooks run and GL/payment reversals and audit entries are

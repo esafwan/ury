@@ -8,7 +8,7 @@ from types import SimpleNamespace
 from frappe.tests.utils import FrappeTestCase
 from unittest.mock import patch, MagicMock
 
-from ury.ury.doctype.ury_order.ury_order import sync_order, price_items_for_invoice
+from ury.ury.doctype.ury_order.ury_order import cancel_order, price_items_for_invoice, sync_order
 
 from unittest.mock import patch, MagicMock
 from ury.ury.doctype.ury_order.ury_order import get_order_invoice
@@ -182,6 +182,142 @@ class TestURYOrder(FrappeTestCase):
             # Waiter and cashier should be set to session user, ignoring "fake_waiter" and "fake_cashier"
             self.assertEqual(mock_invoice.cashier, "newuser@example.com")
             self.assertEqual(mock_invoice.waiter, "newuser@example.com")
+
+
+class TestCancelOrderPostingOrchestration(FrappeTestCase):
+    @patch("ury.ury.doctype.ury_order.ury_order.cancel_posting_intents_for_order")
+    @patch("ury.ury.doctype.ury_order.ury_order.cancel_kot")
+    @patch("ury.ury.doctype.ury_order.ury_order.release_merge_cluster_tables")
+    @patch("ury.ury.doctype.ury_order.ury_order.getBranch")
+    @patch("ury.ury.doctype.ury_order.ury_order.frappe.has_permission")
+    @patch("ury.ury.doctype.ury_order.ury_order.frappe.get_doc")
+    @patch("ury.ury.doctype.ury_order.ury_order.frappe.session")
+    def test_cancel_order_calls_posting_orchestration_before_invoice_cancellation(
+        self,
+        mock_session,
+        mock_get_doc,
+        mock_has_permission,
+        mock_get_branch,
+        mock_release_merge,
+        mock_cancel_kot,
+        mock_cancel_posting,
+    ):
+        mock_session.user = "cashier@example.com"
+        mock_has_permission.return_value = True
+        mock_get_branch.return_value = "Test Branch"
+
+        invoice = MagicMock()
+        invoice.branch = "Test Branch"
+        invoice.restaurant_table = "Table 1"
+        invoice.docstatus = 1
+        invoice.cancel = MagicMock()
+        invoice.db_set = MagicMock()
+        mock_get_doc.return_value = invoice
+
+        cancel_order("POS-INV-001", "customer changed mind")
+
+        mock_cancel_posting.assert_called_once_with(
+            "POS-INV-001",
+            reason="customer changed mind",
+            actor="cashier@example.com",
+        )
+        mock_release_merge.assert_called_once_with("Table 1")
+        mock_cancel_kot.assert_called_once_with("POS-INV-001")
+        invoice.cancel.assert_called_once_with()
+
+    @patch("ury.ury.doctype.ury_order.ury_order.cancel_posting_intents_for_order")
+    @patch("ury.ury.doctype.ury_order.ury_order.cancel_kot")
+    @patch("ury.ury.doctype.ury_order.ury_order.release_merge_cluster_tables")
+    @patch("ury.ury.doctype.ury_order.ury_order.getBranch")
+    @patch("ury.ury.doctype.ury_order.ury_order.frappe.db.set_value")
+    @patch("ury.ury.doctype.ury_order.ury_order.frappe.db.sql")
+    @patch("ury.ury.doctype.ury_order.ury_order.frappe.has_permission")
+    @patch("ury.ury.doctype.ury_order.ury_order.frappe.get_doc")
+    @patch("ury.ury.doctype.ury_order.ury_order.frappe.session")
+    def test_cancel_order_updates_draft_invoice_without_doc_cancel(
+        self,
+        mock_session,
+        mock_get_doc,
+        mock_has_permission,
+        mock_sql,
+        mock_set_value,
+        mock_get_branch,
+        mock_release_merge,
+        mock_cancel_kot,
+        mock_cancel_posting,
+    ):
+        mock_session.user = "cashier@example.com"
+        mock_has_permission.return_value = True
+        mock_get_branch.return_value = "Test Branch"
+
+        invoice = MagicMock()
+        invoice.branch = "Test Branch"
+        invoice.restaurant_table = None
+        invoice.docstatus = 0
+        invoice.cancel = MagicMock()
+        invoice.db_set = MagicMock()
+        mock_get_doc.return_value = invoice
+
+        cancel_order("POS-INV-002", "customer changed mind")
+
+        mock_cancel_posting.assert_called_once_with(
+            "POS-INV-002",
+            reason="customer changed mind",
+            actor="cashier@example.com",
+        )
+        mock_cancel_kot.assert_called_once_with("POS-INV-002")
+        invoice.cancel.assert_not_called()
+        mock_sql.assert_called_once()
+        mock_set_value.assert_any_call("POS Invoice", "POS-INV-002", "docstatus", 2)
+        mock_set_value.assert_any_call("POS Invoice", "POS-INV-002", "status", "Cancelled")
+        mock_set_value.assert_any_call(
+            "POS Invoice",
+            "POS-INV-002",
+            "cancel_reason",
+            "customer changed mind",
+        )
+
+    @patch("ury.ury.doctype.ury_order.ury_order.cancel_posting_intents_for_order")
+    @patch("ury.ury.doctype.ury_order.ury_order.cancel_kot")
+    @patch("ury.ury.doctype.ury_order.ury_order.release_merge_cluster_tables")
+    @patch("ury.ury.doctype.ury_order.ury_order.getBranch")
+    @patch("ury.ury.doctype.ury_order.ury_order.frappe.has_permission")
+    @patch("ury.ury.doctype.ury_order.ury_order.frappe.get_doc")
+    @patch("ury.ury.doctype.ury_order.ury_order.frappe.session")
+    def test_cancel_order_aborts_when_kot_cancellation_fails(
+        self,
+        mock_session,
+        mock_get_doc,
+        mock_has_permission,
+        mock_get_branch,
+        mock_release_merge,
+        mock_cancel_kot,
+        mock_cancel_posting,
+    ):
+        mock_session.user = "cashier@example.com"
+        mock_has_permission.return_value = True
+        mock_get_branch.return_value = "Test Branch"
+        mock_cancel_kot.side_effect = RuntimeError("kot cancellation failed")
+
+        invoice = MagicMock()
+        invoice.branch = "Test Branch"
+        invoice.restaurant_table = "Table 1"
+        invoice.docstatus = 1
+        invoice.cancel = MagicMock()
+        invoice.db_set = MagicMock()
+        mock_get_doc.return_value = invoice
+
+        with self.assertRaises(RuntimeError):
+            cancel_order("POS-INV-003", "customer changed mind")
+
+        mock_cancel_posting.assert_called_once_with(
+            "POS-INV-003",
+            reason="customer changed mind",
+            actor="cashier@example.com",
+        )
+        mock_release_merge.assert_called_once_with("Table 1")
+        mock_cancel_kot.assert_called_once_with("POS-INV-003")
+        invoice.cancel.assert_not_called()
 
 
 def _role_rows(*roles):

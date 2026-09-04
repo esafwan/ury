@@ -23,7 +23,8 @@
   "actor",
   "fulfilled_at",
   "section_break_audit",
-  "audit_log"
+  "audit_log",
+  "posting_reference"
  ],
  "fields": [
   {
@@ -140,6 +141,12 @@
    "fieldname": "audit_log",
    "fieldtype": "Long Text",
    "label": "Audit Log (JSON)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "posting_reference",
+   "fieldtype": "Data",
+   "label": "ERPNext Posting Reference",
    "read_only": 1
   }
  ],

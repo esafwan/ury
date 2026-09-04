@@ -5,9 +5,11 @@ import frappe
 from frappe.tests.utils import FrappeTestCase
 
 from ury.ury.api.ury_fulfilment_posting_service import (
+	CANCELLED,
 	FAILED,
 	POSTED,
 	create_or_get_posting_intent_for_ready,
+	cancel_posting_intents_for_order,
 	process_posting_intent,
 	recover_pending_posting_intents,
 )
@@ -109,6 +111,32 @@ def _get_all_for_create(reservation_rows=None, existing_sequences=None, same_gro
 		raise AssertionError(doctype)
 
 	return get_all
+
+
+def _order_reservation_rows(status="Reserved", reservation_group="GROUP-1"):
+	return [
+		frappe._dict(
+			{
+				"name": "RES-1",
+				"reservation_group": reservation_group,
+				"status": status,
+			}
+		)
+	]
+
+
+def _order_intent_rows(status="PENDING", stock_entry=None, reservation_group="GROUP-1"):
+	return [
+		frappe._dict(
+			{
+				"name": "INTENT-1",
+				"status": status,
+				"order_ref": "POS-INV-1",
+				"reservation_ref": reservation_group,
+				"erpnext_stock_entry": stock_entry,
+			}
+		)
+	]
 
 
 class TestCreatePostingIntent(FrappeTestCase):
@@ -359,3 +387,142 @@ class TestProcessPostingIntent(FrappeTestCase):
 
 		self.assertEqual(result, ["PENDING-1", "FAILED-DUE"])
 		self.assertEqual([call.args[0] for call in enqueue.call_args_list], ["PENDING-1", "FAILED-DUE"])
+
+
+class TestCancelPostingIntentOrchestration(FrappeTestCase):
+	def setUp(self):
+		patcher = patch(f"{MODULE}.now", return_value="2026-09-04 10:00:00")
+		patcher.start()
+		self.addCleanup(patcher.stop)
+
+	def test_pending_intent_releases_reserved_group_and_marks_cancelled(self):
+		intent = _doc(
+			{
+				"name": "INTENT-1",
+				"status": "PENDING",
+				"order_ref": "POS-INV-1",
+				"reservation_ref": "GROUP-1",
+				"erpnext_stock_entry": None,
+				"cancellation_reason": None,
+			}
+		)
+
+		def get_doc(doctype, name=None, *args, **kwargs):
+			if doctype == "URY Fulfilment Posting Intent":
+				return intent
+			raise AssertionError(doctype)
+
+		def get_all(doctype, *args, **kwargs):
+			if doctype == "URY Stock Reservation":
+				return _order_reservation_rows(status="Reserved")
+			if doctype == "URY Fulfilment Posting Intent":
+				return _order_intent_rows(status="PENDING")
+			raise AssertionError(doctype)
+
+		with patch(f"{MODULE}.frappe.get_doc", side_effect=get_doc), patch(
+			f"{MODULE}.frappe.get_all", side_effect=get_all
+		), patch(f"{MODULE}.release_reservation", return_value=["RES-1"]) as release_reservation:
+			result = cancel_posting_intents_for_order("POS-INV-1", reason="guest changed mind", actor="cashier@example.com")
+
+		release_reservation.assert_called_once_with("GROUP-1", reason="guest changed mind")
+		self.assertEqual(result["reservation_groups"][0]["status"], "released")
+		self.assertEqual(result["intents"][0]["status"], CANCELLED)
+		self.assertEqual(intent.status, CANCELLED)
+		self.assertEqual(intent.cancellation_reason, "guest changed mind")
+		self.assertEqual(intent.actor, "cashier@example.com")
+
+	def test_failed_intent_releases_reserved_group_and_marks_cancelled(self):
+		intent = _doc(
+			{
+				"name": "INTENT-1",
+				"status": "FAILED",
+				"order_ref": "POS-INV-1",
+				"reservation_ref": "GROUP-1",
+				"erpnext_stock_entry": None,
+				"cancellation_reason": None,
+			}
+		)
+
+		def get_doc(doctype, name=None, *args, **kwargs):
+			if doctype == "URY Fulfilment Posting Intent":
+				return intent
+			raise AssertionError(doctype)
+
+		def get_all(doctype, *args, **kwargs):
+			if doctype == "URY Stock Reservation":
+				return _order_reservation_rows(status="Reserved")
+			if doctype == "URY Fulfilment Posting Intent":
+				return _order_intent_rows(status="FAILED")
+			raise AssertionError(doctype)
+
+		with patch(f"{MODULE}.frappe.get_doc", side_effect=get_doc), patch(
+			f"{MODULE}.frappe.get_all", side_effect=get_all
+		), patch(f"{MODULE}.release_reservation", return_value=["RES-1"]) as release_reservation:
+			result = cancel_posting_intents_for_order("POS-INV-1", reason="chef rejected", actor="manager@example.com")
+
+		release_reservation.assert_called_once_with("GROUP-1", reason="chef rejected")
+		self.assertEqual(result["reservation_groups"][0]["status"], "released")
+		self.assertEqual(result["intents"][0]["status"], CANCELLED)
+		self.assertEqual(intent.status, CANCELLED)
+		self.assertEqual(intent.cancellation_reason, "chef rejected")
+		self.assertEqual(intent.actor, "manager@example.com")
+
+	def test_posted_intent_requires_explicit_reversal(self):
+		intent = _doc(
+			{
+				"name": "INTENT-1",
+				"status": "POSTED",
+				"order_ref": "POS-INV-1",
+				"reservation_ref": "GROUP-1",
+				"erpnext_stock_entry": "STE-1",
+			}
+		)
+
+		def get_doc(doctype, name=None, *args, **kwargs):
+			if doctype == "URY Fulfilment Posting Intent":
+				return intent
+			raise AssertionError(doctype)
+
+		def get_all(doctype, *args, **kwargs):
+			if doctype == "URY Stock Reservation":
+				return _order_reservation_rows(status="Reserved")
+			if doctype == "URY Fulfilment Posting Intent":
+				return _order_intent_rows(status="POSTED", stock_entry="STE-1")
+			raise AssertionError(doctype)
+
+		with patch(f"{MODULE}.frappe.get_doc", side_effect=get_doc), patch(
+			f"{MODULE}.frappe.get_all", side_effect=get_all
+		), patch(f"{MODULE}.release_reservation") as release_reservation:
+			with self.assertRaises(Exception) as ctx:
+				cancel_posting_intents_for_order("POS-INV-1", reason="guest changed mind", actor="cashier@example.com")
+
+		release_reservation.assert_not_called()
+		self.assertTrue(hasattr(ctx.exception, "reason_code"))
+		self.assertEqual(ctx.exception.reason_code, "REVERSAL_REQUIRED")
+
+	def test_fulfilled_reservation_requires_explicit_reversal(self):
+		intent = _doc(
+			{
+				"name": "INTENT-1",
+				"status": "PENDING",
+				"order_ref": "POS-INV-1",
+				"reservation_ref": "GROUP-1",
+			}
+		)
+
+		def get_doc(doctype, name=None, *args, **kwargs):
+			if doctype == "URY Fulfilment Posting Intent":
+				return intent
+			raise AssertionError(doctype)
+
+		with patch(f"{MODULE}.frappe.get_doc", side_effect=get_doc), patch(
+			f"{MODULE}.frappe.get_all", side_effect=lambda doctype, *args, **kwargs: _order_reservation_rows(status="Fulfilled")
+			if doctype == "URY Stock Reservation"
+			else _order_intent_rows(status="PENDING")
+		), patch(f"{MODULE}.release_reservation") as release_reservation:
+			with self.assertRaises(Exception) as ctx:
+				cancel_posting_intents_for_order("POS-INV-1", reason="guest changed mind", actor="cashier@example.com")
+
+		release_reservation.assert_not_called()
+		self.assertTrue(hasattr(ctx.exception, "reason_code"))
+		self.assertEqual(ctx.exception.reason_code, "REVERSAL_REQUIRED")

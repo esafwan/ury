@@ -139,6 +139,33 @@ class TestURYOrder(FrappeTestCase):
                 pos_profile="Test Profile"
             )
 
+    @patch("ury.ury.doctype.ury_order.ury_order.cancel_kot")
+    @patch("ury.ury.doctype.ury_order.ury_order.frappe.get_doc")
+    @patch("ury.ury.doctype.ury_order.ury_order.frappe.has_permission")
+    def test_cancel_order_propagates_kot_cancellation_failure(
+        self, mock_has_permission, mock_get_doc, mock_cancel_kot
+    ):
+        mock_invoice = MagicMock()
+        mock_invoice.name = "POS-INV-001"
+        mock_invoice.branch = "Test Branch"
+        mock_invoice.restaurant_table = None
+        mock_invoice.docstatus = 1
+        mock_invoice.cancel_reason = None
+        mock_invoice.db_set = MagicMock()
+        mock_invoice.cancel = MagicMock()
+        mock_get_doc.return_value = mock_invoice
+        mock_has_permission.return_value = True
+        mock_cancel_kot.side_effect = Exception("kot cancellation failed")
+
+        from ury.ury.doctype.ury_order.ury_order import cancel_order
+
+        with self.assertRaisesRegex(Exception, "kot cancellation failed"):
+            cancel_order("POS-INV-001", "customer changed mind")
+
+        mock_invoice.db_set.assert_not_called()
+        mock_invoice.cancel.assert_not_called()
+        mock_cancel_kot.assert_called_once_with("POS-INV-001")
+
     @patch("ury.ury.doctype.ury_order.ury_order.get_order_invoice")
     @patch("ury.ury.doctype.ury_order.ury_order.frappe.has_permission")
     @patch("ury.ury.doctype.ury_order.ury_order.frappe.db.get_value")

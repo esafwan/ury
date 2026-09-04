@@ -1964,12 +1964,10 @@ def cancel_order(invoice_id, reason):
     if pos_invoice.restaurant_table:
         release_merge_cluster_tables(pos_invoice.restaurant_table)
 
-    try:
-        cancel_kot(invoice_id)
-
-    except Exception as e:
-        # If an exception occurs (e.g., "kot" app not found), it will be caught here without effecting execution
-        pass
+    # KOT cancellation is part of the order-cancellation transaction. If it
+    # fails, stop immediately so the invoice is not cancelled while the KOT
+    # state remains out of sync.
+    cancel_kot(invoice_id)
 
     # Use standard Frappe cancel workflow instead of raw SQL
     pos_invoice.db_set("cancel_reason", reason)

@@ -216,6 +216,9 @@ doc_events = {
     "URY Menu Course": {
 		"validate": "ury.ury.api.ury_menu_course_validation.validate_priority",
 	},
+    "URY KOT": {
+        "on_submit": "ury.ury.api.ury_kot_item_execution_service.seed_kot_item_executions_on_submit",
+    },
     "AI Provider": {"on_update": "ury.ury.ai_tools.agent_seeding.on_ai_provider_update"},
 }
 

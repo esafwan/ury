@@ -47,6 +47,19 @@ class ItemExecutionError(frappe.ValidationError):
 		super().__init__(message or reason_code)
 
 
+def _reservation_line_key(row):
+	return (
+		row.get("reservation_line_key")
+		or row.get("reservation_line_ref")
+		or row.get("line_ref")
+		or row.get("pos_line_ref")
+		or row.get("pos_line_id")
+		or row.get("unique_id")
+		or row.get("uniqueId")
+		or row.get("name")
+	)
+
+
 def _require_item_execution_doctype():
 	if not frappe.db.exists("DocType", ITEM_EXECUTION_DOCTYPE):
 		raise ItemExecutionError(KOT_NOT_FOUND, _("{0} is not available on this site").format(ITEM_EXECUTION_DOCTYPE))
@@ -74,7 +87,8 @@ def _lock_item_execution_row(kot_item):
 	rows = frappe.db.sql(
 		f"""
 		SELECT name, state, idempotency_key, started_by, started_at,
-		       ready_by, ready_at, served_by, served_at, kot, kot_item
+		       ready_by, ready_at, served_by, served_at, kot, kot_item,
+		       reservation_line_key
 		FROM `tab{ITEM_EXECUTION_DOCTYPE}`
 		WHERE kot_item = %(kot_item)s
 		ORDER BY creation DESC
@@ -94,6 +108,7 @@ def _find_prior_result(kot_item, target_state, idempotency_key):
 		fields=[
 			"name", "state", "idempotency_key", "started_by", "started_at",
 			"ready_by", "ready_at", "served_by", "served_at", "kot", "kot_item",
+			"reservation_line_key",
 		],
 		order_by="creation desc",
 		limit=1,
@@ -108,6 +123,7 @@ def _result_dict(row, idempotent=False):
 		"kot_item": row.get("kot_item"),
 		"state": row.get("state"),
 		"idempotency_key": row.get("idempotency_key"),
+		"reservation_line_key": row.get("reservation_line_key"),
 		"started_by": row.get("started_by"),
 		"started_at": row.get("started_at"),
 		"ready_by": row.get("ready_by"),
@@ -209,6 +225,7 @@ def seed_kot_item_executions(kot, actor=None):
 			"doctype": ITEM_EXECUTION_DOCTYPE,
 			"kot": kot,
 			"kot_item": kot_item,
+			"reservation_line_key": _reservation_line_key(row),
 			"state": QUEUED,
 			"branch": branch,
 			"company": company,

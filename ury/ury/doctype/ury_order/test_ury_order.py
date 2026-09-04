@@ -8,7 +8,7 @@ from types import SimpleNamespace
 from frappe.tests.utils import FrappeTestCase
 from unittest.mock import patch, MagicMock
 
-from ury.ury.doctype.ury_order.ury_order import sync_order, price_items_for_invoice
+from ury.ury.doctype.ury_order.ury_order import sync_order, price_items_for_invoice, reconcile_order_reservations
 
 from unittest.mock import patch, MagicMock
 from ury.ury.doctype.ury_order.ury_order import get_order_invoice
@@ -182,6 +182,188 @@ class TestURYOrder(FrappeTestCase):
             # Waiter and cashier should be set to session user, ignoring "fake_waiter" and "fake_cashier"
             self.assertEqual(mock_invoice.cashier, "newuser@example.com")
             self.assertEqual(mock_invoice.waiter, "newuser@example.com")
+
+    @patch("ury.ury.doctype.ury_order.ury_order.reconcile_order_reservations")
+    @patch("ury.ury.doctype.ury_order.ury_order.kot_execute")
+    @patch("ury.ury.doctype.ury_order.ury_order.price_items_for_invoice")
+    @patch("ury.ury.doctype.ury_order.ury_order.get_order_invoice")
+    @patch("ury.ury.doctype.ury_order.ury_order.frappe.has_permission")
+    @patch("ury.ury.doctype.ury_order.ury_order.frappe.db.get_value")
+    @patch("ury.ury.doctype.ury_order.ury_order.frappe.get_doc")
+    @patch("ury.ury.doctype.ury_order.ury_order.frappe.get_roles")
+    @patch("ury.ury.doctype.ury_order.ury_order.frappe.session")
+    def test_sync_order_reconciles_reservations_for_delta(self, mock_session, mock_get_roles, mock_get_doc, mock_get_value, mock_has_permission, mock_get_order_invoice, mock_price_items, mock_kot_execute, mock_reconcile):
+        events = []
+        mock_invoice = MagicMock()
+        mock_invoice.name = "POS-INV-001"
+        mock_invoice.branch = "Test Branch"
+        mock_invoice.company = "Company A"
+        mock_invoice.restaurant_table = "Table 1"
+        mock_invoice.invoice_printed = 0
+        mock_invoice.invoice_created = 1
+        mock_invoice.items = [MagicMock(item_code="ITEM-1", qty=1)]
+        mock_invoice.waiter = "existing_waiter"
+        mock_invoice.creation = "2026-09-03 10:00:00"
+        mock_invoice.selling_price_list = "Standard Selling"
+        mock_invoice.save = MagicMock(side_effect=lambda: events.append("save"))
+        mock_invoice.as_dict = MagicMock(return_value={"name": "POS-INV-001"})
+        mock_reconcile.side_effect = lambda **kwargs: events.append("reconcile") or [
+            {"item": "ITEM-1", "qty": 3, "reservation_line_key": "pos:ITEM-1:1"}
+        ]
+
+        mock_get_order_invoice.return_value = mock_invoice
+        mock_price_items.return_value = [{"item_code": "ITEM-1", "qty": 3}]
+        mock_get_doc.return_value = _make_pos_profile(
+            transfer_role_permissions=("URY Manager",),
+            role_allowed_for_billing=("URY Manager",),
+            remove_items=1,
+        )
+        mock_get_roles.return_value = ["URY Manager"]
+        mock_session.user = "manager@example.com"
+        mock_has_permission.return_value = True
+
+        def get_value_side_effect(doctype, filters=None, fieldname=None):
+            if doctype == "URY Table" and fieldname == ["branch", "restaurant_room"]:
+                return ("Test Branch", "Main Hall")
+            if doctype == "URY Menu":
+                return "Menu A"
+            return "Test Customer"
+
+        mock_get_value.side_effect = get_value_side_effect
+
+        with patch("ury.ury.doctype.ury_order.ury_order.frappe.db.sql"):
+            sync_order(
+                items='[{"item": "ITEM-1", "qty": 3}]',
+                cashier="fake_cashier",
+                owner="fake_owner",
+                mode_of_payment="Cash",
+                customer="Test Customer",
+                no_of_pax=2,
+                last_invoice=None,
+                waiter="fake_waiter",
+                pos_profile="Test Profile",
+                table="Table 1",
+            )
+
+        mock_reconcile.assert_called_once_with(
+            order_ref="POS-INV-001",
+            previous_items=[{"item_code": "ITEM-1", "qty": 1, "comments": ""}],
+            accepted_items=[{"item": "ITEM-1", "qty": 3}],
+            branch="Test Branch",
+            company="Company A",
+            actor="manager@example.com",
+        )
+        mock_kot_execute.assert_called_once()
+        self.assertEqual(mock_kot_execute.call_args.args[3][0]["reservation_line_key"], "pos:ITEM-1:1")
+        self.assertEqual(events, ["reconcile", "save"])
+
+    @patch("ury.ury.doctype.ury_order.ury_order.reconcile_order_reservations")
+    @patch("ury.ury.doctype.ury_order.ury_order.kot_execute")
+    @patch("ury.ury.doctype.ury_order.ury_order.price_items_for_invoice")
+    @patch("ury.ury.doctype.ury_order.ury_order.get_order_invoice")
+    @patch("ury.ury.doctype.ury_order.ury_order.frappe.has_permission")
+    @patch("ury.ury.doctype.ury_order.ury_order.frappe.db.get_value")
+    @patch("ury.ury.doctype.ury_order.ury_order.frappe.get_doc")
+    @patch("ury.ury.doctype.ury_order.ury_order.frappe.get_roles")
+    @patch("ury.ury.doctype.ury_order.ury_order.frappe.session")
+    def test_sync_order_reservation_failure_rolls_back_before_invoice_save(self, mock_session, mock_get_roles, mock_get_doc, mock_get_value, mock_has_permission, mock_get_order_invoice, mock_price_items, mock_kot_execute, mock_reconcile):
+        existing_line = MagicMock(item_code="ITEM-1", item_name="Item One", qty=1)
+        mock_invoice = MagicMock()
+        mock_invoice.name = "POS-INV-002"
+        mock_invoice.branch = "Test Branch"
+        mock_invoice.company = "Company A"
+        mock_invoice.restaurant_table = None
+        mock_invoice.invoice_printed = 0
+        mock_invoice.invoice_created = 1
+        mock_invoice.items = [existing_line]
+        mock_invoice.waiter = "manager@example.com"
+        mock_invoice.selling_price_list = "Standard Selling"
+
+        mock_get_order_invoice.return_value = mock_invoice
+        mock_price_items.return_value = [{"item_code": "ITEM-1", "qty": 3}]
+        mock_reconcile.side_effect = frappe.ValidationError("insufficient stock")
+        mock_get_doc.return_value = _make_pos_profile(
+            transfer_role_permissions=("URY Manager",),
+            role_allowed_for_billing=("URY Manager",),
+            remove_items=1,
+        )
+        mock_get_roles.return_value = ["URY Manager"]
+        mock_session.user = "manager@example.com"
+        mock_has_permission.return_value = True
+        mock_get_value.return_value = "Menu A"
+
+        with patch("ury.ury.doctype.ury_order.ury_order.frappe.db.sql"):
+            with self.assertRaises(frappe.ValidationError):
+                sync_order(
+                    items='[{"item": "ITEM-1", "qty": 3}]',
+                    cashier="fake_cashier",
+                    owner="fake_owner",
+                    mode_of_payment="Cash",
+                    customer="Test Customer",
+                    no_of_pax=2,
+                    last_invoice=None,
+                    waiter="fake_waiter",
+                    pos_profile="Test Profile",
+                )
+
+        mock_invoice.save.assert_not_called()
+        mock_kot_execute.assert_not_called()
+        self.assertEqual(mock_invoice.items, [existing_line])
+
+    @patch("ury.ury.doctype.ury_order.ury_order.reconcile_order_reservations")
+    @patch("ury.ury.doctype.ury_order.ury_order.kot_execute")
+    @patch("ury.ury.doctype.ury_order.ury_order.price_items_for_invoice")
+    @patch("ury.ury.doctype.ury_order.ury_order.get_order_invoice")
+    @patch("ury.ury.doctype.ury_order.ury_order.frappe.db.get_value")
+    @patch("ury.ury.doctype.ury_order.ury_order.frappe.get_doc")
+    @patch("ury.ury.doctype.ury_order.ury_order.frappe.get_roles")
+    @patch("ury.ury.doctype.ury_order.ury_order.frappe.session")
+    def test_sync_order_allocates_new_invoice_ref_before_reservation(self, mock_session, mock_get_roles, mock_get_doc, mock_get_value, mock_get_order_invoice, mock_price_items, mock_kot_execute, mock_reconcile):
+        events = []
+        mock_invoice = MagicMock()
+        mock_invoice.name = None
+        mock_invoice.branch = "Test Branch"
+        mock_invoice.company = "Company A"
+        mock_invoice.restaurant_table = None
+        mock_invoice.invoice_printed = 0
+        mock_invoice.invoice_created = 1
+        mock_invoice.items = []
+        mock_invoice.waiter = None
+        mock_invoice.selling_price_list = "Standard Selling"
+        mock_invoice.order_type = "Take Away"
+        mock_invoice.set_new_name = MagicMock(side_effect=lambda: setattr(mock_invoice, "name", "POS-INV-NEW"))
+        mock_invoice.save = MagicMock(side_effect=lambda: events.append("save"))
+        mock_invoice.as_dict = MagicMock(return_value={"name": "POS-INV-NEW"})
+        mock_reconcile.side_effect = lambda **kwargs: events.append(("reconcile", kwargs["order_ref"]))
+
+        mock_get_order_invoice.return_value = mock_invoice
+        mock_price_items.return_value = [{"item_code": "ITEM-1", "qty": 1}]
+        mock_get_doc.return_value = _make_pos_profile(
+            transfer_role_permissions=("URY Manager",),
+            role_allowed_for_billing=("URY Manager",),
+            remove_items=1,
+        )
+        mock_get_roles.return_value = ["URY Manager"]
+        mock_session.user = "manager@example.com"
+        mock_get_value.return_value = "Menu A"
+
+        with patch("ury.ury.doctype.ury_order.ury_order.frappe.db.sql"):
+            sync_order(
+                items='[{"item": "ITEM-1", "qty": 1}]',
+                cashier="fake_cashier",
+                owner="fake_owner",
+                mode_of_payment="Cash",
+                customer="Test Customer",
+                no_of_pax=2,
+                last_invoice=None,
+                waiter="fake_waiter",
+                pos_profile="Test Profile",
+                order_type="Take Away",
+            )
+
+        mock_invoice.set_new_name.assert_called_once()
+        mock_reconcile.assert_called_once()
+        self.assertEqual(events, [("reconcile", "POS-INV-NEW"), "save"])
 
 
 def _role_rows(*roles):

@@ -89,7 +89,7 @@ def _kot_order_ref(kot):
 	return invoice or kot
 
 
-def _reservation_rows(order_ref, item_code, branch, company):
+def _reservation_rows(order_ref, item_code, branch, company, reservation_line_key=None):
 	rows = frappe.get_all(
 		RESERVATION_DOCTYPE,
 		filters={
@@ -115,6 +115,29 @@ def _reservation_rows(order_ref, item_code, branch, company):
 		raise FulfilmentPostingError(
 			"RESERVATION_NOT_FOUND",
 			_("No Reserved stock reservation found for order {0}, item {1}").format(order_ref, item_code),
+		)
+	if reservation_line_key:
+		matched_rows = []
+		for row in rows:
+			try:
+				_, frozen_context = _reservation_audit_context(row)
+			except FulfilmentPostingError:
+				continue
+			if frozen_context.get("reservation_line_key") == reservation_line_key:
+				matched_rows.append(row)
+		if not matched_rows:
+			raise FulfilmentPostingError(
+				"RESERVATION_LINE_BINDING_MISSING",
+				_("No Reserved stock reservation found for order {0}, item {1}, line {2}").format(
+					order_ref, item_code, reservation_line_key
+				),
+			)
+		rows = matched_rows
+	groups = {row.get("reservation_group") or row.get("name") for row in rows}
+	if len(groups) > 1:
+		raise FulfilmentPostingError(
+			"AMBIGUOUS_RESERVATION_BINDING",
+			_("KOT item {0} maps to multiple reservation groups; posting is blocked until the line is resolved").format(item_code),
 		)
 	return rows
 
@@ -159,6 +182,7 @@ def _reservation_snapshot(row, item_code):
 		"production_unit": context.get("production_unit"),
 		"department": context.get("department"),
 		"production_configuration": context.get("production_configuration"),
+		"reservation_line_key": context.get("reservation_line_key"),
 	}
 
 
@@ -201,9 +225,16 @@ def _next_fulfilment_sequence(branch, kot, kot_item, accepted_revision, reservat
 
 
 def _freeze_payload(execution_doc, actor):
-	_kot_item, item_code, accepted_qty = _kot_item_doc(execution_doc.kot_item)
+	kot_item_doc, item_code, accepted_qty = _kot_item_doc(execution_doc.kot_item)
 	order_ref = _kot_order_ref(execution_doc.kot)
-	rows = _reservation_rows(order_ref, item_code, execution_doc.branch, execution_doc.company)
+	reservation_line_key = execution_doc.get("reservation_line_key") or kot_item_doc.get("reservation_line_key")
+	rows = _reservation_rows(
+		order_ref,
+		item_code,
+		execution_doc.branch,
+		execution_doc.company,
+		reservation_line_key=reservation_line_key,
+	)
 	snapshots = [_reservation_snapshot(row, item_code) for row in rows]
 	policies = {snapshot["policy"] for snapshot in snapshots}
 	if len(policies) != 1:
@@ -251,6 +282,7 @@ def _freeze_payload(execution_doc, actor):
 		"production_configuration": snapshots[0].get("production_configuration"),
 		"production_policy": policy,
 		"reservation_group": reservation_group,
+		"reservation_line_key": reservation_line_key,
 		"components": components,
 		"ready_at": execution_doc.get("ready_at") or now(),
 		"actor": actor,
@@ -273,6 +305,7 @@ def _intent_result(intent, idempotent=False):
 		"name": intent.get("name"),
 		"status": intent.get("status"),
 		"idempotency_key": intent.get("idempotency_key"),
+		"reservation_line_key": intent.get("reservation_line_key"),
 		"erpnext_stock_entry": intent.get("erpnext_stock_entry"),
 		"idempotent_replay": idempotent,
 	}
@@ -305,6 +338,7 @@ def create_or_get_posting_intent_for_ready(execution_doc, actor=None):
 			"fulfilment_sequence": payload["fulfilment_sequence"],
 			"accepted_qty": payload["accepted_qty"],
 			"reservation_ref": payload["reservation_group"],
+			"reservation_line_key": payload.get("reservation_line_key"),
 			"frozen_payload_json": _json_dumps(payload),
 			"frozen_payload_hash": _hash_payload(payload),
 			"ready_at": payload["ready_at"],

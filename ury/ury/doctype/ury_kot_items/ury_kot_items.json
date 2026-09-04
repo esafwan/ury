@@ -13,6 +13,7 @@
   "quantity",
   "cancelled_qty",
   "comments",
+  "reservation_line_key",
   "course",
   "serve_priority",
   "indicate_course"
@@ -49,6 +50,12 @@
    "fieldname": "comments",
    "fieldtype": "Data",
    "label": "Comments"
+  },
+  {
+   "fieldname": "reservation_line_key",
+   "fieldtype": "Data",
+   "label": "Reservation Line Key",
+   "read_only": 1
   },
   {
    "fieldname": "course",

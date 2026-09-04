@@ -101,6 +101,26 @@ def _line_quantities(rows):
 	return result
 
 
+def _annotate_line_items(rows):
+	"""Return row copies annotated with their deterministic reservation line key."""
+	seen = defaultdict(int)
+	annotated = []
+	for row in rows or []:
+		item_code = _item_code(row)
+		if not item_code:
+			continue
+		base_context = _line_ref(row) or json.dumps(_line_context(row), sort_keys=True, default=str)
+		occurrence_base = "{0}:{1}".format(item_code, base_context)
+		seen[occurrence_base] += 1
+		line_key = _line_key(item_code, row, seen[occurrence_base])
+		line = dict(row)
+		line["reservation_line_key"] = line_key
+		line["source_line_ref"] = _line_ref(row)
+		line["source_context"] = _line_context(row)
+		annotated.append(line)
+	return annotated
+
+
 def _warehouse_for_context(context):
 	warehouse = context.get("warehouse")
 	if not warehouse and context.get("department"):
@@ -230,3 +250,5 @@ def reconcile_order_reservations(order_ref, previous_items, accepted_items, bran
 		line = dict(line)
 		line["qty"] = accepted_qty
 		_reconcile_line(order_ref, line_key, line, branch, company, actor)
+
+	return _annotate_line_items(accepted_items)

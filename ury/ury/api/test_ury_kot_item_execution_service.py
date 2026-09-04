@@ -78,6 +78,37 @@ class TestKotItemExecution(FrappeTestCase):
 		self.assertEqual(len(created), 3)
 		self.assertEqual(created[0]["state"], QUEUED)
 
+	def test_seed_carries_reservation_line_key_into_execution_rows(self):
+		created = []
+
+		def get_doc(*args, **kwargs):
+			arg = args[0] if args else kwargs.get("arg1")
+			if isinstance(arg, dict):
+				doc = frappe._dict(dict(arg))
+				doc.insert = MagicMock()
+				doc.save = MagicMock()
+				doc.set = lambda field, value, _doc=doc: _doc.__setitem__(field, value)
+				doc.as_dict = lambda _doc=doc: dict(_doc)
+				created.append(doc)
+				return doc
+			if arg == "URY KOT":
+				items = [frappe._dict({"name": "KOTITEM-1", "reservation_line_key": "ref:ITEM-1:POS-LINE-1"})]
+				doc = frappe._dict({"kot_items": items})
+				doc.get = lambda key, default=None, _doc=doc: _doc[key] if key in _doc else default
+				return doc
+			raise AssertionError(f"unexpected get_doc lookup: {arg!r}")
+
+		with patch(f"{MODULE}.frappe.db.exists", side_effect=_exists), patch(
+			f"{MODULE}.frappe.get_doc", side_effect=get_doc
+		), patch(f"{MODULE}.frappe.get_all", return_value=[]), patch(
+			f"{MODULE}.frappe.db.get_value", return_value=frappe._dict({"branch": "BR-1", "production": "PU-1"})
+		), patch(f"{MODULE}.frappe.session") as session:
+			session.user = "chef@example.com"
+			rows = seed_kot_item_executions("URY KOT-1")
+
+		self.assertEqual(rows[0]["reservation_line_key"], "ref:ITEM-1:POS-LINE-1")
+		self.assertEqual(created[0]["reservation_line_key"], "ref:ITEM-1:POS-LINE-1")
+
 	def test_item_transitions_update_aggregate_state(self):
 		get_doc, created = _make_doc_recorder()
 		item_rows = [

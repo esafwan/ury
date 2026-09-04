@@ -40,6 +40,21 @@ class TestOrderReservationLineIsolation(unittest.TestCase):
 		self.assertEqual(company, "COMP-1")
 		self.assertEqual(actor, "user@example.com")
 
+	def test_same_item_duplicate_lines_keep_distinct_occurrence_keys(self):
+		accepted = [
+			{"item": "ITEM-1", "qty": 1, "comment": "same"},
+			{"item": "ITEM-1", "qty": 1, "comment": "same"},
+		]
+
+		with patch.object(service, "_reconcile_line") as reconcile_line:
+			result = service.reconcile_order_reservations("INV-2", [], accepted, "BR-1", "COMP-1", "user@example.com")
+
+		self.assertEqual(len(result), 2)
+		self.assertNotEqual(result[0]["reservation_line_key"], result[1]["reservation_line_key"])
+		self.assertEqual(result[0]["reservation_line_key"], service._line_key("ITEM-1", accepted[0], 1))
+		self.assertEqual(result[1]["reservation_line_key"], service._line_key("ITEM-1", accepted[1], 2))
+		self.assertEqual(reconcile_line.call_count, 2)
+
 	def test_active_groups_only_returns_matching_line_key(self):
 		rows = [
 			{

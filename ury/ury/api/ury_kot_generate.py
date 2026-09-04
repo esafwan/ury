@@ -11,6 +11,19 @@ def load_json(data):
     return data
 
 
+def _reservation_line_key(item):
+    return (
+        item.get("reservation_line_key")
+        or item.get("reservation_line_ref")
+        or item.get("line_ref")
+        or item.get("pos_line_ref")
+        or item.get("pos_line_id")
+        or item.get("unique_id")
+        or item.get("uniqueId")
+        or item.get("name")
+    )
+
+
 # Create a list of order items from a list of input items
 def create_order_items(items):
     order_items = []
@@ -20,6 +33,7 @@ def create_order_items(items):
             "qty": item["qty"],
             "item_name": item["item_name"],
             "comments": item.get("comment", item.get("comments", "")),
+            "reservation_line_key": _reservation_line_key(item),
         }
         order_items.append(order_item)
     return order_items
@@ -77,6 +91,7 @@ def create_kot_doc(
                 "item_name": item["item_name"],
                 "quantity": item["qty"],
                 "comments": item["comments"],
+                "reservation_line_key": item.get("reservation_line_key"),
                 "course":course
             },
         )

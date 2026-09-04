@@ -27,22 +27,23 @@ def _doc(data):
 	return doc
 
 
-def _execution_doc():
-	return _doc(
-		{
-			"name": "EXEC-1",
-			"kot": "KOT-1",
-			"kot_item": "KOTITEM-1",
-			"branch": "Branch A",
-			"company": "Company A",
-			"production_unit": "PU-1",
-			"idempotency_key": "ready-1",
-			"ready_at": "2026-09-04 10:00:00",
-		}
-	)
+def _execution_doc(reservation_line_key=None):
+	payload = {
+		"name": "EXEC-1",
+		"kot": "KOT-1",
+		"kot_item": "KOTITEM-1",
+		"branch": "Branch A",
+		"company": "Company A",
+		"production_unit": "PU-1",
+		"idempotency_key": "ready-1",
+		"ready_at": "2026-09-04 10:00:00",
+	}
+	if reservation_line_key:
+		payload["reservation_line_key"] = reservation_line_key
+	return _doc(payload)
 
 
-def _audit_log(component_item, qty, warehouse="Kitchen WH", policy="MADE_TO_ORDER"):
+def _audit_log(component_item, qty, warehouse="Kitchen WH", policy="MADE_TO_ORDER", reservation_line_key="ref:ITEM-1:POS-LINE-1"):
 	return json.dumps(
 		[
 			{
@@ -58,6 +59,7 @@ def _audit_log(component_item, qty, warehouse="Kitchen WH", policy="MADE_TO_ORDE
 					"production_unit": "PU-FROZEN",
 					"department": "Kitchen",
 					"production_configuration": "CFG-1",
+					"reservation_line_key": reservation_line_key,
 				},
 			}
 		],
@@ -220,6 +222,62 @@ class TestCreatePostingIntent(FrappeTestCase):
 
 		self.assertEqual(result["idempotency_key"], "Branch A:KOT-1:KOTITEM-1:ready-1:1")
 		self.assertEqual(created[0]["fulfilment_sequence"], 1)
+
+	def test_ready_binds_to_exact_reservation_line_for_duplicate_same_item_rows(self):
+		created = []
+
+		def get_doc(arg, *args, **kwargs):
+			if arg == "URY KOT Items":
+				return _doc({"item": "PLATE-1", "quantity": 1, "reservation_line_key": "ref:ITEM-1:POS-LINE-1"})
+			if isinstance(arg, dict):
+				doc = _doc(arg)
+				doc.name = "INTENT-3"
+				created.append(doc)
+				return doc
+			raise AssertionError(arg)
+
+		reservation_rows = [
+			frappe._dict(
+				{
+					"name": "RES-1",
+					"reservation_group": "GROUP-1",
+					"policy": "DIRECT_RETAIL",
+					"warehouse": "MUTATED WH",
+					"top_level_item": "PLATE-1",
+					"component_item": "COMP-1",
+					"qty": 2,
+					"audit_log": _audit_log("COMP-1", 2, reservation_line_key="ref:ITEM-1:POS-LINE-1"),
+				}
+			),
+			frappe._dict(
+				{
+					"name": "RES-2",
+					"reservation_group": "GROUP-2",
+					"policy": "DIRECT_RETAIL",
+					"warehouse": "MUTATED WH",
+					"top_level_item": "PLATE-1",
+					"component_item": "COMP-2",
+					"qty": 1,
+					"audit_log": _audit_log("COMP-2", 1, reservation_line_key="ref:ITEM-1:POS-LINE-2"),
+				}
+			),
+		]
+
+		with patch(f"{MODULE}.frappe.db.exists", return_value=True), patch(
+			f"{MODULE}.frappe.get_doc", side_effect=get_doc
+		), patch(f"{MODULE}.frappe.db.get_value", return_value="POS-INV-1"), patch(
+			f"{MODULE}.frappe.get_all", side_effect=_get_all_for_create(reservation_rows=reservation_rows)
+		), patch(f"{MODULE}.frappe.session") as session:
+			session.user = "chef@example.com"
+			result = create_or_get_posting_intent_for_ready(
+				_execution_doc(reservation_line_key="ref:ITEM-1:POS-LINE-1"),
+				actor="chef@example.com",
+			)
+
+		self.assertFalse(result["idempotent_replay"])
+		self.assertEqual(created[0]["reservation_ref"], "GROUP-1")
+		self.assertEqual(created[0]["reservation_line_key"], "ref:ITEM-1:POS-LINE-1")
+		self.assertEqual(json.loads(created[0]["frozen_payload_json"])["reservation_line_key"], "ref:ITEM-1:POS-LINE-1")
 
 	def test_ready_replay_returns_existing_intent(self):
 		existing = _doc({"name": "INTENT-1", "status": "PENDING", "idempotency_key": "Branch A:KOT-1:KOTITEM-1:ready-1:1"})

@@ -237,7 +237,7 @@ def _require_create_permission():
 		frappe.throw(_("Not permitted to create reservations"), frappe.PermissionError)
 
 
-def append_audit(doc, actor, event, reason=None):
+def append_audit(doc, actor, event, reason=None, frozen_context=None):
 	import json
 
 	existing = doc.get("audit_log")
@@ -253,6 +253,8 @@ def append_audit(doc, actor, event, reason=None):
 	}
 	if reason:
 		entry["reason"] = reason
+	if frozen_context:
+		entry["frozen_context"] = frozen_context
 	entries.append(entry)
 	doc.audit_log = json.dumps(entries, sort_keys=True, default=str)
 
@@ -268,6 +270,7 @@ def create_reservation(
 	policy=None,
 	actor=None,
 	expires_at=None,
+	frozen_context=None,
 ):
 	"""Atomically reserve capacity for `item_code` (or all of its BOM components).
 
@@ -348,7 +351,7 @@ def create_reservation(
 				"actor": actor,
 			}
 		)
-		append_audit(doc, actor, event="create")
+		append_audit(doc, actor, event="create", frozen_context=frozen_context)
 		doc.insert(ignore_permissions=False)
 		created_names.append(doc.name)
 

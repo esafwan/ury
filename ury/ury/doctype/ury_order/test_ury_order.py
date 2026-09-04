@@ -413,7 +413,15 @@ class TestPriceItemsForInvoicePhase1(unittest.TestCase):
         mock_price.price_list_rate = 150
         mock_get_list.return_value = [mock_price]
 
-        items = [{"item": "Biryani", "item_name": "Biryani", "qty": 2, "comment": "less spicy"}]
+        items = [
+            {
+                "item": "Biryani",
+                "item_name": "Biryani",
+                "qty": 2,
+                "comment": "less spicy",
+                "reservation_line_key": "ref:Biryani:POS-1",
+            }
+        ]
         result = price_items_for_invoice(items, "Standard Selling", "Test Profile", "Branch A", "Menu A")
 
         self.assertEqual(len(result), 1)
@@ -426,6 +434,7 @@ class TestPriceItemsForInvoicePhase1(unittest.TestCase):
         self.assertEqual(row["base_price_list_rate"], 150)
         self.assertEqual(row["custom_course"], "Starters")
         self.assertEqual(row["cost_center"], "Cost Center A")
+        self.assertEqual(row["reservation_line_key"], "ref:Biryani:POS-1")
 
     @patch("ury.ury.doctype.ury_order.ury_order.frappe.db.get_list")
     @patch("ury.ury.doctype.ury_order.ury_order.frappe.db.get_value")
@@ -476,6 +485,7 @@ class TestPriceItemsForInvoicePhase1(unittest.TestCase):
         mock_has_permission.return_value = True
 
         priced = [{"item_code": "Biryani", "item_name": "Biryani", "qty": 1, "comment": None,
+                   "reservation_line_key": "pos:Biryani:1",
                    "rate": 150, "price_list_rate": 150, "base_price_list_rate": 150, "cost_center": "CC-1"}]
         mock_price_items.return_value = priced
 

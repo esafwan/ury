@@ -920,6 +920,7 @@ def price_items_for_invoice(items, price_list, pos_profile, branch, menu):
                     item_code=d.get("item"),
                     item_name=d.get("item_name"),
                     qty=d.get("qty"),
+                    reservation_line_key=d.get("reservation_line_key"),
                     **({"custom_course": course} if course else {}),
                     comment=d.get("comment"),
                     rate = item_prices[0].price_list_rate,

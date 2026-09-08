@@ -1285,13 +1285,25 @@ def get_pos_opening_screen_data() -> dict:
             pos_profile_data = None
 
     # Payment modes with opening_amount default 0.
+    #
+    # Opening balance only declares the physical cash float for the shift —
+    # UPI/card/wallet takings are captured per-transaction during the day and
+    # reconciled at closing, so non-cash modes configured on the POS Profile
+    # are excluded here even though they're valid for sales.
     payment_modes = []
     if pos_profile_name:
         try:
             pos_profile_doc = frappe.get_doc("POS Profile", pos_profile_name)
+            cash_modes = {
+                m
+                for m in frappe.get_all(
+                    "Mode of Payment", filters={"type": "Cash"}, pluck="name"
+                )
+            }
             payment_modes = [
                 {"mode_of_payment": mop.mode_of_payment, "opening_amount": 0.0}
                 for mop in pos_profile_doc.payments
+                if mop.mode_of_payment in cash_modes
             ]
         except Exception:
             payment_modes = []

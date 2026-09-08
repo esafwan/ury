@@ -462,9 +462,15 @@ class TestGetPOSOpeningScreenData(unittest.TestCase):
                 "main_cashier_configured": True,
                 "main_cashier_open": True,
             }
-            mock_get_all.return_value = [
-                {"name": "POS-OPE-0001", "company": "Test Co", "pos_profile": "POS-Profile-1", "status": "Open"}
-            ]
+
+            def get_all_side_effect(doctype, *args, **kwargs):
+                if doctype == "Mode of Payment":
+                    return ["Cash"]
+                return [
+                    {"name": "POS-OPE-0001", "company": "Test Co", "pos_profile": "POS-Profile-1", "status": "Open"}
+                ]
+
+            mock_get_all.side_effect = get_all_side_effect
 
             result = get_pos_opening_screen_data()
 
@@ -478,7 +484,10 @@ class TestGetPOSOpeningScreenData(unittest.TestCase):
         self.assertTrue(result["multi_cashier"]["enabled"])
         self.assertTrue(result["multi_cashier"]["main_cashier_configured"])
         self.assertTrue(result["multi_cashier"]["main_cashier_open"])
-        self.assertEqual(len(result["payment_modes"]), 2)
+        # Only the Cash mode is offered for opening balance — Card is a valid
+        # sales payment mode but not part of the physical float being declared.
+        self.assertEqual(len(result["payment_modes"]), 1)
+        self.assertEqual(result["payment_modes"][0]["mode_of_payment"], "Cash")
         self.assertEqual(result["payment_modes"][0]["opening_amount"], 0.0)
         self.assertFalse(result["daily_close_pending"])
         self.assertTrue(result["permissions"]["create"])

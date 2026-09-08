@@ -30,6 +30,7 @@ def seed():
     restaurant_name = _get_demo_restaurant(branch_name)
 
     pos_profile_name = _seed_pos_profile(company_name, branch_name, restaurant_name)
+    _ensure_administrator_pos_access(branch_name, pos_profile_name)
     _ensure_pos_opening_entry(company_name, branch_name, pos_profile_name)
     _seed_self_ordering_profile(pos_profile_name, branch_name, restaurant_name)
 
@@ -298,6 +299,37 @@ def _seed_pos_profile(company_name, branch_name, restaurant_name):
         pos_doc.save(ignore_permissions=True)
 
     return pos_doc.name
+
+
+ADMINISTRATOR_POS_ROLES = ["URY Admin", "URY Manager", "URY Captain", "URY Cashier"]
+
+
+def _ensure_administrator_pos_access(branch_name, pos_profile_name):
+    """Give Administrator the same Branch/POS Profile/role access a real
+    cashier/captain gets, so POS flows (branch resolution via `getBranch()`,
+    POS Profile resolution, opening/closing) work when testing as Administrator
+    instead of failing with "User is not Associated with any Branch" or
+    silently excluding Administrator from the POS Profile's applicable users.
+    """
+    admin = frappe.get_doc("User", "Administrator")
+    missing_roles = [r for r in ADMINISTRATOR_POS_ROLES if r not in {row.role for row in admin.roles}]
+    if missing_roles:
+        admin.add_roles(*missing_roles)
+
+    if branch_name and not frappe.db.exists(
+        "URY User", {"parent": branch_name, "parenttype": "Branch", "user": "Administrator"}
+    ):
+        branch_doc = frappe.get_doc("Branch", branch_name)
+        branch_doc.append("user", {"user": "Administrator"})
+        branch_doc.save(ignore_permissions=True)
+
+    if pos_profile_name:
+        pos_doc = frappe.get_doc("POS Profile", pos_profile_name)
+        if pos_doc.meta.has_field("applicable_for_users") and "Administrator" not in {
+            row.user for row in pos_doc.get("applicable_for_users", [])
+        }:
+            pos_doc.append("applicable_for_users", {"user": "Administrator", "default": 0})
+            pos_doc.save(ignore_permissions=True)
 
 
 def _get_demo_cashier_user():

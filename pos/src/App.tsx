@@ -23,6 +23,7 @@ import ChatWidget, {
   AiEnabledProvider,
   type ChatWidgetHandle,
 } from './components/chat/ChatWidget';
+import { isPermissionError } from './components/dashboard/isPermissionError';
 
 function useAiSettings() {
   // Fail-closed: no AI surface renders until the backend explicitly says
@@ -42,7 +43,14 @@ function useAiSettings() {
           setAiEnabled(true);
         }
       } catch (err) {
-        console.error('Error fetching AI settings:', err);
+        // get_ai_settings is manager-gated server-side (require_manager) —
+        // every POS user hits this on app load, so a non-manager getting a
+        // PermissionError here is expected, not a fault worth logging. Stay
+        // fail-closed (aiEnabled already defaults to false) without the
+        // console noise; only log genuinely unexpected failures.
+        if (!isPermissionError(err)) {
+          console.error('Error fetching AI settings:', err);
+        }
       }
     })();
 

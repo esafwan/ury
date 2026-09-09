@@ -93,7 +93,8 @@ def _lock_item_execution_row(kot_item):
 	rows = frappe.db.sql(
 		f"""
 		SELECT name, state, idempotency_key, started_by, started_at,
-		       ready_by, ready_at, served_by, served_at, kot, kot_item
+		       ready_by, ready_at, served_by, served_at, kot, kot_item,
+		       branch, company, production_unit, audit_log
 		FROM `tab{ITEM_EXECUTION_DOCTYPE}`
 		WHERE kot_item = %(kot_item)s
 		ORDER BY creation DESC
@@ -167,13 +168,38 @@ def _aggregate_state(rows):
 	return QUEUED
 
 
-def _sync_kot_execution(kot):
-	rows = frappe.get_all(
-		ITEM_EXECUTION_DOCTYPE,
-		filters={"kot": kot},
-		fields=["name", "state", "idempotency_key", "started_by", "started_at", "ready_by", "ready_at", "served_by", "served_at"],
-		order_by="creation asc",
+def _lock_sibling_item_execution_rows(kot):
+	"""Lock every `URY KOT Item Execution` row for `kot` with `FOR UPDATE`.
+
+	`_transition` only locks the single item row it is mutating (via
+	`_lock_item_execution_row`); by the time this function runs, that lock
+	has typically already been released (the caller's `doc.save()` for that
+	one row already committed the row-level work). A concurrent transition
+	on a *sibling* item of the same KOT can be mutating another row right
+	now. A plain `get_all` here would read from whatever consistent-read
+	snapshot this transaction already pinned (e.g. via `_find_prior_result`
+	earlier in the same request), which can be older than that concurrent
+	sibling's commit -- so the KOT-level aggregate would be computed from a
+	stale sibling set. Locking every sibling row up front forces MariaDB to
+	wait for any in-flight sibling transaction and then read its latest
+	committed state, bypassing the pinned snapshot.
+	"""
+	return frappe.db.sql(
+		f"""
+		SELECT name, state, idempotency_key, started_by, started_at,
+		       ready_by, ready_at, served_by, served_at
+		FROM `tab{ITEM_EXECUTION_DOCTYPE}`
+		WHERE kot = %(kot)s
+		ORDER BY creation ASC
+		FOR UPDATE
+		""",
+		{"kot": kot},
+		as_dict=True,
 	)
+
+
+def _sync_kot_execution(kot):
+	rows = _lock_sibling_item_execution_rows(kot)
 	if not rows:
 		return None
 	state = _aggregate_state(rows)

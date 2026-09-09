@@ -16,6 +16,7 @@ import { formatCurrency } from '@ury/core';
 import { getOpenPosOpeningEntries, type OpenPosOpeningEntry } from '../lib/pos-closing-api';
 import InsightFeed from '../components/dashboard/InsightFeed';
 import AskBar from '../components/chat/AskBar';
+import { isPermissionError } from '../components/dashboard/isPermissionError';
 
 // Helper function to format relative time
 function getRelativeTime(creationDate: string): string {
@@ -153,6 +154,15 @@ export default function Dashboard() {
   const [needsAttentionError, setNeedsAttentionError] = useState<string | null>(null);
   const [notificationsError, setNotificationsError] = useState<string | null>(null);
   const [openEntriesError, setOpenEntriesError] = useState<string | null>(null);
+  // Service Line / Running Low hit manager-gated endpoints (require_manager
+  // server-side). For a non-manager the correct behaviour, per the same
+  // convention already used by InsightFeed/FastMovingItems/
+  // BaselineComparisonStrip, is for these panels to be absent rather than
+  // showing a red "Failed to load" error — the dashboard must degrade
+  // quietly, never look broken (and must not imply "no tables occupied"
+  // when the real answer is "you can't see this").
+  const [serviceLineHidden, setServiceLineHidden] = useState(false);
+  const [runningLowHidden, setRunningLowHidden] = useState(false);
 
   useEffect(() => {
     if (!posProfile?.branch) return;
@@ -203,8 +213,13 @@ export default function Dashboard() {
         const serviceData = Array.isArray(serviceRes.message) ? serviceRes.message : [];
         setServiceLine(serviceData);
       } catch (err) {
-        setServiceLineError('Failed to load service line');
-        console.error('Error fetching service line:', err);
+        if (isPermissionError(err)) {
+          // Not a manager — hide the panel entirely rather than showing an error.
+          setServiceLineHidden(true);
+        } else {
+          setServiceLineError('Failed to load service line');
+          console.error('Error fetching service line:', err);
+        }
       } finally {
         setServiceLineLoading(false);
       }
@@ -255,8 +270,13 @@ export default function Dashboard() {
         const runningData = Array.isArray(runningRes.message) ? runningRes.message : [];
         setRunningLow(runningData);
       } catch (err) {
-        setRunningLowError('Failed to load running low items');
-        console.error('Error fetching running low:', err);
+        if (isPermissionError(err)) {
+          // Not a manager — hide the panel entirely rather than showing an error.
+          setRunningLowHidden(true);
+        } else {
+          setRunningLowError('Failed to load running low items');
+          console.error('Error fetching running low:', err);
+        }
       } finally {
         setRunningLowLoading(false);
       }
@@ -399,7 +419,10 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Service Line — the operational heart of the screen. */}
+        {/* Service Line — the operational heart of the screen. Hidden for
+            non-managers (see serviceLineHidden above) rather than shown
+            with a misleading "no tables seated" empty state. */}
+        {!serviceLineHidden && (
         <Panel
           icon={Activity}
           title="Service Line"
@@ -497,6 +520,7 @@ export default function Dashboard() {
             </div>
           )}
         </Panel>
+        )}
 
         {/* Two-column layout */}
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_340px]">
@@ -550,6 +574,7 @@ export default function Dashboard() {
               )}
             </Panel>
 
+            {!runningLowHidden && (
             <Panel icon={PackageSearch} title="Running Low">
               {runningLowError ? (
                 <PanelState kind="error">Failed to load</PanelState>
@@ -592,6 +617,7 @@ export default function Dashboard() {
                 </div>
               )}
             </Panel>
+            )}
           </div>
 
           {/* Right rail */}

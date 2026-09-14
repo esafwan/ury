@@ -1,18 +1,24 @@
 # Copyright (c) 2026, Tridz Technologies Pvt. Ltd. and contributors
 # See license.txt
 
-"""V3-73 tests: POS stock authority flag integration point in ury_order.py.
+"""V3-73/B02 tests: POS stock authority flag integration point in ury_order.py.
 
 Scope, deliberately narrow (see
 tracks/sa-v3_nxt/outputs/V3-70-fulfilment-accounting-transition-checklist.md
-and the sa-v3_nxt/TODO.md row for V3-73):
+and tracks/sa-testing-issues-14sep/BUG_LIST.md's B02 section):
 
 1. Flag OFF (unset/off) -> `invoice.update_stock` ends up 1, exactly as
    before this task existed. This is the single most important behavior in
    this whole task: it is what makes the flag a real rollback mechanism.
-2. Flag ON (mocked only -- never true in real, unmocked code) -> fails closed
-   until fulfilment posting has enough runtime evidence to make native POS
-   stock updates safe to disable.
+2. Flag ON (mocked only in these tests -- only ever true in a real
+   environment if a human explicitly enables it) -> `invoice.update_stock`
+   is set to 0 here (never throws at this call site any more: real stock
+   deduction is driven off KOT item READY/SERVED via
+   ury_fulfilment_posting_service, not off invoice creation, and items do
+   not even exist yet at this call site to check). The actual fail-closed
+   verification that every produced item was really posted moved to
+   `ury_feature_flags.maybe_wire_fulfilment_on_submit`, covered separately
+   in test_ury_feature_flags.py.
 3. Flag flip regression: OFF -> ON -> OFF again must return to identical
    `update_stock = 1` behavior, proving no persisted side effect from a
    prior "on" state leaks into a later "off" state on the same or a new
@@ -55,17 +61,19 @@ class TestPosStockAuthorityFlagOffIsUnchangedBehavior(FrappeTestCase):
         self.assertEqual(invoice.update_stock, 1)
 
 
-class TestPosStockAuthorityFlagOnFailsClosed(FrappeTestCase):
+class TestPosStockAuthorityFlagOnDefersToSubmitTimeVerification(FrappeTestCase):
     @patch("ury.ury.doctype.ury_order.ury_order.frappe.log_error")
     @patch("ury.ury.doctype.ury_order.ury_order.is_pos_stock_authority_flag_enabled")
-    def test_flag_on_fails_closed_before_disabling_native_stock(self, mock_flag, mock_log_error):
+    def test_flag_on_sets_update_stock_0_without_raising(self, mock_flag, mock_log_error):
         mock_flag.return_value = True
 
         invoice = SimpleNamespace(update_stock=None)
-        with self.assertRaisesRegex(Exception, "not enabled for production yet"):
-            _apply_pos_stock_authority(invoice, branch="Main Branch")
+        # No longer throws here -- items don't exist yet at invoice-creation
+        # time to verify anything about. The real fail-closed gate is
+        # ury_feature_flags.maybe_wire_fulfilment_on_submit, at submission.
+        _apply_pos_stock_authority(invoice, branch="Main Branch")
 
-        self.assertIsNone(invoice.update_stock)
+        self.assertEqual(invoice.update_stock, 0)
         mock_log_error.assert_not_called()
 
 
@@ -79,13 +87,12 @@ class TestPosStockAuthorityFlagFlipRegression(FrappeTestCase):
         _apply_pos_stock_authority(invoice_a, branch="Main Branch")
         self.assertEqual(invoice_a.update_stock, 1)
 
-        # Then on, for a different invoice. Until the V3 fulfilment path is
-        # fully proven, this must fail before changing invoice stock behavior.
+        # Then on, for a different invoice -- update_stock flips to 0 so the
+        # verified fulfilment-posting path becomes authoritative for it.
         mock_flag.return_value = True
         invoice_b = SimpleNamespace(update_stock=None)
-        with self.assertRaisesRegex(Exception, "not enabled for production yet"):
-            _apply_pos_stock_authority(invoice_b, branch="Main Branch")
-        self.assertIsNone(invoice_b.update_stock)
+        _apply_pos_stock_authority(invoice_b, branch="Main Branch")
+        self.assertEqual(invoice_b.update_stock, 0)
 
         # Flip back off -- a brand new invoice must behave exactly like
         # invoice_a did, with no residue from the flag having been on.

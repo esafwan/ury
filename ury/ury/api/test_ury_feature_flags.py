@@ -1,7 +1,10 @@
 # Copyright (c) 2026, Tridz Technologies Pvt. Ltd. and contributors
 # See license.txt
 
-"""V3-73 tests: POS stock authority feature flag read path.
+"""V3-73/B02 tests: POS stock authority feature flag read path, and the
+submit-time verification gate that lets a flag-on invoice through only once
+every produced KOT item on it has a real, POSTED fulfilment posting intent
+(a submitted Stock Entry) behind it.
 
 These are static/unit tests using mocks -- no bench/site required to reason
 about them, but they follow this repo's existing FrappeTestCase + mock
@@ -60,117 +63,132 @@ class TestPosStockAuthorityFlagDefaultsSafe(FrappeTestCase):
 
 
 class TestMaybeWireFulfilmentOnSubmit(FrappeTestCase):
-    """V3-73 flag-on wiring, added on top of the accepted flag-read path."""
+    """B02: flag-on submit-time verification that real Stock Entries were
+    posted for every produced KOT item on the invoice, added on top of the
+    accepted flag-read path."""
 
     @patch("ury.ury.api.ury_feature_flags.is_pos_stock_authority_flag_enabled")
-    @patch("ury.ury.api.ury_feature_flags._wire_fulfilment_for_invoice")
-    def test_noop_when_flag_off(self, mock_wire, mock_flag):
+    @patch("ury.ury.api.ury_feature_flags._verify_fulfilment_posted_for_invoice")
+    def test_noop_when_flag_off(self, mock_verify, mock_flag):
         mock_flag.return_value = False
         doc = {"name": "POS-INV-001", "branch": "Main Branch"}
         maybe_wire_fulfilment_on_submit(doc)
-        mock_wire.assert_not_called()
+        mock_verify.assert_not_called()
 
     @patch("ury.ury.api.ury_feature_flags.is_pos_stock_authority_flag_enabled")
-    @patch("ury.ury.api.ury_feature_flags._wire_fulfilment_for_invoice")
-    def test_calls_wiring_when_flag_on(self, mock_wire, mock_flag):
+    @patch("ury.ury.api.ury_feature_flags._verify_fulfilment_posted_for_invoice")
+    def test_calls_verification_when_flag_on(self, mock_verify, mock_flag):
         mock_flag.return_value = True
         doc = {"name": "POS-INV-001", "branch": "Main Branch"}
         maybe_wire_fulfilment_on_submit(doc)
-        mock_wire.assert_called_once_with(doc)
+        mock_verify.assert_called_once_with(doc)
 
     @patch("ury.ury.api.ury_feature_flags.is_pos_stock_authority_flag_enabled")
-    @patch("ury.ury.api.ury_feature_flags._wire_fulfilment_for_invoice")
-    def test_wiring_failure_is_propagated(self, mock_wire, mock_flag):
+    @patch("ury.ury.api.ury_feature_flags._verify_fulfilment_posted_for_invoice")
+    def test_verification_failure_is_propagated(self, mock_verify, mock_flag):
         mock_flag.return_value = True
-        mock_wire.side_effect = Exception("boom")
+        mock_verify.side_effect = Exception("boom")
         doc = {"name": "POS-INV-001", "branch": "Main Branch"}
         with self.assertRaises(Exception):
             maybe_wire_fulfilment_on_submit(doc)
 
     @patch("ury.ury.api.ury_feature_flags.frappe.get_all")
-    def test_wire_for_invoice_noop_when_no_kots(self, mock_get_all):
-        from ury.ury.api.ury_feature_flags import _wire_fulfilment_for_invoice
+    def test_verify_noop_when_no_kots(self, mock_get_all):
+        from ury.ury.api.ury_feature_flags import _verify_fulfilment_posted_for_invoice
 
         mock_get_all.return_value = []
         doc = frappe._dict({"name": "POS-INV-001"})
-        # Must not raise, and must not proceed past the KOT lookup.
-        _wire_fulfilment_for_invoice(doc)
+        # Must not raise, and must not proceed past the KOT lookup (no
+        # doctype-existence or item-execution queries either).
+        _verify_fulfilment_posted_for_invoice(doc)
         mock_get_all.assert_called_once()
 
-    @patch("ury.ury.api.ury_feature_flags.frappe.get_doc")
+    @patch("ury.ury.api.ury_feature_flags.frappe.db.exists")
     @patch("ury.ury.api.ury_feature_flags.frappe.get_all")
-    def test_wire_for_invoice_skips_when_no_matching_reservation(
-        self, mock_get_all, mock_get_doc
+    def test_verify_fails_closed_when_posting_infrastructure_missing(
+        self, mock_get_all, mock_exists
     ):
-        from ury.ury.api.ury_feature_flags import _wire_fulfilment_for_invoice
+        from ury.ury.api.ury_feature_flags import _verify_fulfilment_posted_for_invoice
 
-        # First get_all call: KOTs linked to invoice.
-        # Second: KOT Execution rows (READY). Third: reservation lookup (none).
-        mock_get_all.side_effect = [
-            [frappe._dict({"name": "KOT-001"})],
-            [frappe._dict({"state": "READY"})],
-            [],
-        ]
-        kot_doc = frappe._dict(
-            {"kot_items": [frappe._dict({"item": "BURGER", "quantity": 2})]}
-        )
-        mock_get_doc.return_value = kot_doc
+        mock_get_all.return_value = [frappe._dict({"name": "KOT-001"})]
+        mock_exists.return_value = False
         doc = frappe._dict({"name": "POS-INV-001"})
 
-        with patch("ury.ury.api.ury_feature_flags.frappe.db.get_value", return_value=None):
-            with self.assertRaises(frappe.ValidationError):
-                _wire_fulfilment_for_invoice(doc)
+        with self.assertRaises(frappe.ValidationError):
+            _verify_fulfilment_posted_for_invoice(doc)
 
-    @patch("ury.ury.api.ury_feature_flags.frappe.get_doc")
+    @patch("ury.ury.api.ury_feature_flags.frappe.db.exists", return_value=True)
+    @patch("ury.ury.api.ury_feature_flags.frappe.db.get_value")
     @patch("ury.ury.api.ury_feature_flags.frappe.get_all")
-    def test_wire_for_invoice_rejects_ambiguous_mto_reservation_binding(
-        self, mock_get_all, mock_get_doc
-    ):
-        from ury.ury.api.ury_feature_flags import _wire_fulfilment_for_invoice
+    def test_verify_skips_items_never_produced(self, mock_get_all, mock_get_value, mock_exists):
+        from ury.ury.api.ury_feature_flags import _verify_fulfilment_posted_for_invoice
 
         mock_get_all.side_effect = [
             [frappe._dict({"name": "KOT-001"})],
-            [frappe._dict({"state": "READY"})],
-            [
-                frappe._dict({"name": "RES-1", "reservation_group": "GROUP-1"}),
-                frappe._dict({"name": "RES-2", "reservation_group": "GROUP-2"}),
-            ],
+            [frappe._dict({"name": "IE-1", "kot_item": "KI-1", "state": "QUEUED"})],
         ]
-        mock_get_doc.return_value = frappe._dict(
-            {"kot_items": [frappe._dict({"item": "BURGER", "quantity": 2})]}
-        )
-        doc = frappe._dict({"name": "POS-INV-001", "branch": "Main Branch"})
+        doc = frappe._dict({"name": "POS-INV-001"})
 
-        with patch(
-            "ury.ury.api.ury_feature_flags.frappe.db.get_value",
-            return_value="MADE_TO_ORDER",
-        ):
-            with self.assertRaises(frappe.ValidationError):
-                _wire_fulfilment_for_invoice(doc)
+        # Must not raise, and must never look up a posting intent for an
+        # item that was never produced.
+        _verify_fulfilment_posted_for_invoice(doc)
+        mock_get_value.assert_not_called()
 
-    @patch("ury.ury.api.ury_feature_flags.frappe.get_doc")
+    @patch("ury.ury.api.ury_feature_flags.frappe.db.exists", return_value=True)
+    @patch("ury.ury.api.ury_feature_flags.frappe.db.get_value")
     @patch("ury.ury.api.ury_feature_flags.frappe.get_all")
-    def test_wire_for_invoice_rejects_ambiguous_preproduced_reservation_rows(
-        self, mock_get_all, mock_get_doc
+    def test_verify_rejects_produced_item_with_no_posting_intent(
+        self, mock_get_all, mock_get_value, mock_exists
     ):
-        from ury.ury.api.ury_feature_flags import _wire_fulfilment_for_invoice
+        from ury.ury.api.ury_feature_flags import _verify_fulfilment_posted_for_invoice
 
         mock_get_all.side_effect = [
             [frappe._dict({"name": "KOT-001"})],
-            [frappe._dict({"state": "READY"})],
-            [
-                frappe._dict({"name": "RES-1", "reservation_group": "GROUP-1"}),
-                frappe._dict({"name": "RES-2", "reservation_group": "GROUP-1"}),
-            ],
+            [frappe._dict({"name": "IE-1", "kot_item": "KI-1", "state": "READY"})],
         ]
-        mock_get_doc.return_value = frappe._dict(
-            {"kot_items": [frappe._dict({"item": "BURGER", "quantity": 2})]}
-        )
-        doc = frappe._dict({"name": "POS-INV-001", "branch": "Main Branch"})
+        mock_get_value.return_value = None  # no posting intent found
+        doc = frappe._dict({"name": "POS-INV-001"})
+
+        with self.assertRaises(frappe.ValidationError):
+            _verify_fulfilment_posted_for_invoice(doc)
+
+    @patch("ury.ury.api.ury_feature_flags.frappe.db.exists", return_value=True)
+    @patch("ury.ury.api.ury_feature_flags.frappe.db.get_value")
+    @patch("ury.ury.api.ury_feature_flags.frappe.get_all")
+    def test_verify_accepts_already_posted_intent(self, mock_get_all, mock_get_value, mock_exists):
+        from ury.ury.api.ury_feature_flags import _verify_fulfilment_posted_for_invoice
+
+        mock_get_all.side_effect = [
+            [frappe._dict({"name": "KOT-001"})],
+            [frappe._dict({"name": "IE-1", "kot_item": "KI-1", "state": "SERVED"})],
+        ]
+        # First get_value: posting-intent name lookup. Second: its status.
+        mock_get_value.side_effect = ["INTENT-1", "POSTED"]
+        doc = frappe._dict({"name": "POS-INV-001"})
+
+        # Must not raise.
+        _verify_fulfilment_posted_for_invoice(doc)
+
+    @patch("ury.ury.api.ury_feature_flags.frappe.db.exists", return_value=True)
+    @patch("ury.ury.api.ury_feature_flags.frappe.db.get_value")
+    @patch("ury.ury.api.ury_feature_flags.frappe.get_all")
+    def test_verify_retries_pending_intent_then_rejects_if_still_not_posted(
+        self, mock_get_all, mock_get_value, mock_exists
+    ):
+        from ury.ury.api.ury_feature_flags import _verify_fulfilment_posted_for_invoice
+
+        mock_get_all.side_effect = [
+            [frappe._dict({"name": "KOT-001"})],
+            [frappe._dict({"name": "IE-1", "kot_item": "KI-1", "state": "READY"})],
+        ]
+        # Name lookup, then status before retry, then status after retry.
+        mock_get_value.side_effect = ["INTENT-1", "PENDING", "PENDING"]
 
         with patch(
-            "ury.ury.api.ury_feature_flags.frappe.db.get_value",
-            return_value="PRE_PRODUCED",
-        ):
+            "ury.ury.api.ury_fulfilment_posting_service.process_posting_intent",
+            return_value=None,
+        ) as mock_process:
+            doc = frappe._dict({"name": "POS-INV-001"})
             with self.assertRaises(frappe.ValidationError):
-                _wire_fulfilment_for_invoice(doc)
+                _verify_fulfilment_posted_for_invoice(doc)
+            mock_process.assert_called_once_with("INTENT-1")

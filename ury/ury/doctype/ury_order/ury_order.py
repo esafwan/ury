@@ -24,48 +24,50 @@ from frappe import cache
 
 
 def _apply_pos_stock_authority(invoice, branch=None):
-    """V3-73: the SOLE integration point between POS Invoice creation and the
-    new fulfilment services (V3-71/V3-72).
+    """V3-73/B02: the SOLE integration point between POS Invoice creation and
+    the real fulfilment-posting pipeline (`ury_fulfilment_posting_service.py`
+    + `ury_kot_item_execution_service.py`).
 
-    Flag OFF (the only state that is ever true today, and the default in
-    every environment): behavior is byte-for-byte identical to before this
-    task -- `invoice.update_stock` is set to 1, nothing else happens. This
-    is the safe/current/rollback state. See the governing contract at
+    Flag OFF (the default in every environment that has not explicitly
+    opted in): behavior is byte-for-byte identical to before this task --
+    `invoice.update_stock` is set to 1, nothing else happens. ERPNext's
+    native POS stock deduction remains sole authority. See the governing
+    contract at
     tracks/sa-v3_nxt/outputs/V3-70-fulfilment-accounting-transition-checklist.md.
 
-    Flag ON (never true today; only reachable if a human explicitly flips
-    the "URY Feature Flags" > "POS Stock Authority V2 Enabled" checkbox,
-    which no code in this app does): sets `invoice.update_stock = 0` and
-    makes a best-effort, minimal call into the V3-71/V3-72 fulfilment
-    services.
+    Flag ON (only reachable if a human explicitly flips the "URY Feature
+    Flags" > "POS Stock Authority V2 Enabled" checkbox for this
+    company/branch): sets `invoice.update_stock = 0` -- native POS deduction
+    is turned OFF for this invoice, because real stock deduction is instead
+    driven by each sold item's KOT item reaching READY/SERVED, which posts a
+    real, submitted `Stock Entry` (Manufacture for MADE_TO_ORDER, Material
+    Issue for PRE_PRODUCED/DIRECT_RETAIL) via
+    `ury_fulfilment_posting_service.create_or_get_posting_intent_for_ready` /
+    `process_posting_intent`. That pipeline is triggered from
+    `ury_kot_item_execution_service.mark_item_ready`/`serve_item_execution`
+    (called by both the Captain app and, since the B01 fix, Mosaic's
+    `kot.vue`), not from this invoice-creation call site -- items are not
+    even finalized yet when this function runs (see call sites: this is
+    invoked on `frappe.new_doc("POS Invoice")`, before any item is added).
 
-    *** WARNING -- FLAG-ON PATH IS AN INTEGRATION STUB, NOT PRODUCTION-READY
-    ***: V3-71/V3-72 are standalone service functions
-    (`fulfil_preproduced_order` / `fulfil_mto_order`) that are not yet
-    robustly wired to a real invoice-submission trigger point (they expect a
-    KOT/reservation/execution-state context that this call site does not
-    have at invoice-creation time -- before items are finalized, taxes are
-    calculated, or the invoice is submitted). This function intentionally
-    does NOT call them here, to avoid guessing at parameter mapping that
-    could misfire against real stock/KOT state. Wiring the flag-on path to
-    the actual fulfilment services, at the correct trigger point in the
-    invoice lifecycle (submission, not creation), with real parameter
-    mapping and error handling, is explicitly out of scope for V3-73 and
-    requires its own dedicated integration-testing task before this flag may
-    ever be enabled in a real environment.
+    This function therefore only ever sets the ERPNext-native-vs-fulfilment-
+    services *mode* for the invoice; it does not and cannot verify that
+    every sold item has actually been posted, because at invoice-creation
+    time no items exist yet to check. That verification -- the actual "is it
+    safe to let this invoice submit with update_stock=0" gate -- lives at
+    the correct trigger point in the invoice lifecycle: submission, not
+    creation. It runs in
+    `ury.ury.api.ury_feature_flags.maybe_wire_fulfilment_on_submit`, wired to
+    POS Invoice's `on_submit` doc_event in hooks.py, which fails the submit
+    closed (raises) if any produced KOT item on this invoice does not yet
+    have a POSTED fulfilment posting intent (i.e. a real submitted Stock
+    Entry) backing it. update_stock=0 is therefore never the last word on
+    whether stock actually moved -- it only opts this invoice out of the
+    native path in favor of the verified one.
     """
 
     if is_pos_stock_authority_flag_enabled(branch=branch):
-        # Fail closed until the replacement posting path is proven end to end.
-        # Disabling ERPNext's native stock update without a submitted posting
-        # reference would silently create unvalued sales and inventory drift.
-        frappe.throw(
-            _(
-                "POS stock authority is not enabled for production yet. "
-                "Complete and validate fulfilment posting before enabling it."
-            ),
-            frappe.ValidationError,
-        )
+        invoice.update_stock = 0
     else:
         # Flag OFF -- identical to this app's behavior before V3-73.
         invoice.update_stock = 1

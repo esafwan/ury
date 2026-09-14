@@ -129,19 +129,35 @@ def _verify_fulfilment_posted_for_invoice(doc):
 			frappe.ValidationError,
 		)
 
-	from ury.ury.api.ury_fulfilment_posting_service import process_posting_intent, POSTED
+	from ury.ury.api.ury_fulfilment_posting_service import (
+		process_posting_intent,
+		is_fulfilment_managed_kot_item,
+		POSTED,
+	)
 
 	for kot in kots:
 		item_execution_rows = frappe.get_all(
 			ITEM_EXECUTION_DOCTYPE,
 			filters={"kot": kot.name},
-			fields=["name", "kot_item", "state"],
+			fields=["name", "kot_item", "state", "branch", "company"],
 		)
 		for row in item_execution_rows:
 			if row.state not in PRODUCED_STATES:
 				# Never produced (e.g. cancelled before READY) -- nothing was
 				# ever supposed to be deducted for it, so there is nothing to
 				# verify here.
+				continue
+
+			if not is_fulfilment_managed_kot_item(row.kot_item, row.branch, row.company):
+				# No production configuration for this item, so it was never
+				# reserved and the READY transition deliberately created no
+				# posting intent for it (see _attach_ready_posting_intent).
+				# Demanding one here would block the till on an item this
+				# pipeline was never responsible for. Known tradeoff: with
+				# update_stock=0 such an item is not deducted by either
+				# authority under the flag, so any sold-as-is item that IS
+				# stock-tracked needs a production configuration before this
+				# flag is turned on for its branch.
 				continue
 
 			intent_name = frappe.db.get_value(

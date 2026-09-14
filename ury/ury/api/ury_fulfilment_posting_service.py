@@ -115,6 +115,44 @@ def _kot_item_doc(kot_item):
 	return doc, item_code, qty
 
 
+def is_fulfilment_managed_kot_item(kot_item, branch, company=None):
+	"""Is this KOT item's stock authoritatively moved by this service?
+
+	Only items with an active, branch-scoped `URY Item Production
+	Configuration` (the doctype that carries the item's recipe/BOM link and
+	its production policy) are reserved at order time, so only those can ever
+	have components to issue. An item with no such configuration -- a bottled
+	drink, a bought-in dessert, anything sold as-is and never recipe-exploded
+	-- has no reservation and therefore no Stock Entry this service could
+	post for it.
+
+	Both the READY transition and the invoice-submit gate need this
+	distinction to tell "this item is legitimately outside the fulfilment
+	pipeline" apart from "this item should have been posted and was not".
+	Without it the flag-on path refuses to let the kitchen mark such an item
+	READY, and refuses to let its invoice submit -- neither of which is a
+	real stock-integrity problem.
+
+	Fails CLOSED: only an affirmative "this item has no production
+	configuration" answer returns False. Any error resolving that (missing
+	KOT item, DB failure) returns True, so the caller keeps demanding a real
+	posted Stock Entry rather than silently waiving deduction for an item
+	that may well be production-managed.
+	"""
+
+	try:
+		_doc, item_code, _qty = _kot_item_doc(kot_item)
+	except Exception:
+		return True
+
+	from ury.ury.api.ury_production_context import resolve_production_context
+
+	try:
+		return bool(resolve_production_context(item_code, branch, company=company))
+	except Exception:
+		return True
+
+
 def _kot_order_ref(kot):
 	invoice = frappe.db.get_value(KOT_DOCTYPE, kot, "invoice")
 	return invoice or kot

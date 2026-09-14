@@ -117,10 +117,16 @@ class TestMaybeWireFulfilmentOnSubmit(FrappeTestCase):
         with self.assertRaises(frappe.ValidationError):
             _verify_fulfilment_posted_for_invoice(doc)
 
+    @patch(
+        "ury.ury.api.ury_fulfilment_posting_service.is_fulfilment_managed_kot_item",
+        return_value=True,
+    )
     @patch("ury.ury.api.ury_feature_flags.frappe.db.exists", return_value=True)
     @patch("ury.ury.api.ury_feature_flags.frappe.db.get_value")
     @patch("ury.ury.api.ury_feature_flags.frappe.get_all")
-    def test_verify_skips_items_never_produced(self, mock_get_all, mock_get_value, mock_exists):
+    def test_verify_skips_items_never_produced(
+        self, mock_get_all, mock_get_value, mock_exists, mock_managed
+    ):
         from ury.ury.api.ury_feature_flags import _verify_fulfilment_posted_for_invoice
 
         mock_get_all.side_effect = [
@@ -134,11 +140,15 @@ class TestMaybeWireFulfilmentOnSubmit(FrappeTestCase):
         _verify_fulfilment_posted_for_invoice(doc)
         mock_get_value.assert_not_called()
 
+    @patch(
+        "ury.ury.api.ury_fulfilment_posting_service.is_fulfilment_managed_kot_item",
+        return_value=True,
+    )
     @patch("ury.ury.api.ury_feature_flags.frappe.db.exists", return_value=True)
     @patch("ury.ury.api.ury_feature_flags.frappe.db.get_value")
     @patch("ury.ury.api.ury_feature_flags.frappe.get_all")
     def test_verify_rejects_produced_item_with_no_posting_intent(
-        self, mock_get_all, mock_get_value, mock_exists
+        self, mock_get_all, mock_get_value, mock_exists, mock_managed
     ):
         from ury.ury.api.ury_feature_flags import _verify_fulfilment_posted_for_invoice
 
@@ -152,10 +162,16 @@ class TestMaybeWireFulfilmentOnSubmit(FrappeTestCase):
         with self.assertRaises(frappe.ValidationError):
             _verify_fulfilment_posted_for_invoice(doc)
 
+    @patch(
+        "ury.ury.api.ury_fulfilment_posting_service.is_fulfilment_managed_kot_item",
+        return_value=True,
+    )
     @patch("ury.ury.api.ury_feature_flags.frappe.db.exists", return_value=True)
     @patch("ury.ury.api.ury_feature_flags.frappe.db.get_value")
     @patch("ury.ury.api.ury_feature_flags.frappe.get_all")
-    def test_verify_accepts_already_posted_intent(self, mock_get_all, mock_get_value, mock_exists):
+    def test_verify_accepts_already_posted_intent(
+        self, mock_get_all, mock_get_value, mock_exists, mock_managed
+    ):
         from ury.ury.api.ury_feature_flags import _verify_fulfilment_posted_for_invoice
 
         mock_get_all.side_effect = [
@@ -169,11 +185,15 @@ class TestMaybeWireFulfilmentOnSubmit(FrappeTestCase):
         # Must not raise.
         _verify_fulfilment_posted_for_invoice(doc)
 
+    @patch(
+        "ury.ury.api.ury_fulfilment_posting_service.is_fulfilment_managed_kot_item",
+        return_value=True,
+    )
     @patch("ury.ury.api.ury_feature_flags.frappe.db.exists", return_value=True)
     @patch("ury.ury.api.ury_feature_flags.frappe.db.get_value")
     @patch("ury.ury.api.ury_feature_flags.frappe.get_all")
     def test_verify_retries_pending_intent_then_rejects_if_still_not_posted(
-        self, mock_get_all, mock_get_value, mock_exists
+        self, mock_get_all, mock_get_value, mock_exists, mock_managed
     ):
         from ury.ury.api.ury_feature_flags import _verify_fulfilment_posted_for_invoice
 
@@ -192,3 +212,41 @@ class TestMaybeWireFulfilmentOnSubmit(FrappeTestCase):
             with self.assertRaises(frappe.ValidationError):
                 _verify_fulfilment_posted_for_invoice(doc)
             mock_process.assert_called_once_with("INTENT-1")
+
+    @patch(
+        "ury.ury.api.ury_fulfilment_posting_service.is_fulfilment_managed_kot_item",
+        return_value=False,
+    )
+    @patch("ury.ury.api.ury_feature_flags.frappe.db.exists", return_value=True)
+    @patch("ury.ury.api.ury_feature_flags.frappe.db.get_value")
+    @patch("ury.ury.api.ury_feature_flags.frappe.get_all")
+    def test_verify_skips_item_with_no_production_configuration(
+        self, mock_get_all, mock_get_value, mock_exists, mock_managed
+    ):
+        """An item with no URY Item Production Configuration (a bottled drink,
+        anything sold as-is) is never reserved, so mark_item_ready
+        deliberately creates no posting intent for it. The submit gate must
+        skip it rather than refuse the invoice for a missing intent that was
+        never supposed to exist."""
+        from ury.ury.api.ury_feature_flags import _verify_fulfilment_posted_for_invoice
+
+        mock_get_all.side_effect = [
+            [frappe._dict({"name": "KOT-001"})],
+            [
+                frappe._dict(
+                    {
+                        "name": "IE-1",
+                        "kot_item": "KI-1",
+                        "state": "SERVED",
+                        "branch": "BR-1",
+                        "company": "CO-1",
+                    }
+                )
+            ],
+        ]
+        doc = frappe._dict({"name": "POS-INV-001"})
+
+        # Must not raise, and must never look up a posting intent at all.
+        _verify_fulfilment_posted_for_invoice(doc)
+        mock_get_value.assert_not_called()
+        mock_managed.assert_called_once_with("KI-1", "BR-1", "CO-1")

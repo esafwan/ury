@@ -259,10 +259,19 @@ class TestAttachReadyPostingIntent(FrappeTestCase):
 		self.assertEqual(returned["posting_intent_status"], "SKIPPED_NATIVE_POS_AUTHORITY")
 
 	def test_creates_posting_intent_when_flag_is_on(self):
-		result = {"name": "EXEC-1", "branch": "Branch A", "company": "Company A", "idempotent_replay": False}
+		result = {
+			"name": "EXEC-1",
+			"kot_item": "KOTITEM-1",
+			"branch": "Branch A",
+			"company": "Company A",
+			"idempotent_replay": False,
+		}
 		fake_doc = frappe._dict({"name": "EXEC-1"})
 		with patch(
 			"ury.ury.api.ury_feature_flags.is_pos_stock_authority_flag_enabled", return_value=True
+		), patch(
+			"ury.ury.api.ury_fulfilment_posting_service.is_fulfilment_managed_kot_item",
+			return_value=True,
 		), patch(f"{MODULE}.frappe.get_doc", return_value=fake_doc), patch(
 			"ury.ury.api.ury_fulfilment_posting_service.create_or_get_posting_intent_for_ready",
 			return_value={"name": "INTENT-1", "status": "PENDING"},
@@ -275,6 +284,35 @@ class TestAttachReadyPostingIntent(FrappeTestCase):
 		mock_enqueue.assert_called_once_with("INTENT-1")
 		self.assertEqual(returned["posting_intent"], "INTENT-1")
 		self.assertEqual(returned["posting_intent_status"], "PENDING")
+
+	def test_skips_posting_intent_when_item_has_no_production_configuration(self):
+		"""B02: an item with no URY Item Production Configuration is never
+		reserved, so create_or_get_posting_intent_for_ready() could only fail
+		it with RESERVATION_NOT_FOUND -- and mark_item_ready() rolls the whole
+		READY transition back on that. Such an item must stay markable READY
+		even with the flag on."""
+		result = {
+			"name": "EXEC-1",
+			"kot_item": "KOTITEM-1",
+			"branch": "Branch A",
+			"company": "Company A",
+			"idempotent_replay": False,
+		}
+		with patch(
+			"ury.ury.api.ury_feature_flags.is_pos_stock_authority_flag_enabled", return_value=True
+		), patch(
+			"ury.ury.api.ury_fulfilment_posting_service.is_fulfilment_managed_kot_item",
+			return_value=False,
+		) as mock_managed, patch(f"{MODULE}.frappe.get_doc") as mock_get_doc, patch(
+			"ury.ury.api.ury_fulfilment_posting_service.create_or_get_posting_intent_for_ready"
+		) as mock_create:
+			returned = _attach_ready_posting_intent(dict(result), actor="chef@example.com")
+
+		mock_managed.assert_called_once_with("KOTITEM-1", "Branch A", "Company A")
+		mock_get_doc.assert_not_called()
+		mock_create.assert_not_called()
+		self.assertIsNone(returned["posting_intent"])
+		self.assertEqual(returned["posting_intent_status"], "SKIPPED_NO_PRODUCTION_CONTEXT")
 
 	def test_idempotent_replay_never_touches_posting_intent(self):
 		result = {"name": "EXEC-1", "branch": "Branch A", "company": "Company A", "idempotent_replay": True}

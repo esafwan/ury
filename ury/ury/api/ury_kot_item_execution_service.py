@@ -168,7 +168,19 @@ def _attach_ready_posting_intent(result, actor):
 	from ury.ury.api.ury_fulfilment_posting_service import (
 		create_or_get_posting_intent_for_ready,
 		enqueue_posting_intent,
+		is_fulfilment_managed_kot_item,
 	)
+
+	# An item with no active production configuration is never reserved, so
+	# create_or_get_posting_intent_for_ready() could only fail it with
+	# RESERVATION_NOT_FOUND -- and mark_item_ready() rolls the whole READY
+	# transition back on that. Skipping here keeps a bottled drink (or any
+	# sold-as-is item) markable READY under the flag; the matching skip in
+	# the invoice-submit gate keeps the two sides' definitions in step.
+	if not is_fulfilment_managed_kot_item(result.get("kot_item"), branch, company):
+		result["posting_intent"] = None
+		result["posting_intent_status"] = "SKIPPED_NO_PRODUCTION_CONTEXT"
+		return result
 
 	doc = frappe.get_doc(ITEM_EXECUTION_DOCTYPE, result["name"])
 	intent = create_or_get_posting_intent_for_ready(doc, actor=actor)

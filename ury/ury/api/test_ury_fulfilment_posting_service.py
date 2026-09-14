@@ -626,3 +626,55 @@ class TestProcessPostingIntent(FrappeTestCase):
 		self.assertEqual(intent.status, FAILED)
 		self.assertFalse(intent.retryable)
 		self.assertIsNone(intent.next_retry_at)
+
+
+class TestIsFulfilmentManagedKotItem(FrappeTestCase):
+	"""B02: the shared "is this item this service's responsibility?" test used
+	by both the READY transition and the POS Invoice submit gate. It must fail
+	CLOSED -- only an affirmative "no production configuration" waives the
+	demand for a real posted Stock Entry."""
+
+	def test_true_when_item_has_active_production_configuration(self):
+		from ury.ury.api.ury_fulfilment_posting_service import is_fulfilment_managed_kot_item
+
+		with patch(
+			"ury.ury.api.ury_fulfilment_posting_service._kot_item_doc",
+			return_value=(frappe._dict({}), "ITEM-1", 1.0),
+		), patch(
+			"ury.ury.api.ury_production_context.resolve_production_context",
+			return_value=frappe._dict({"name": "IPC-1"}),
+		):
+			self.assertTrue(is_fulfilment_managed_kot_item("KI-1", "BR-1", "CO-1"))
+
+	def test_false_only_when_no_production_configuration_exists(self):
+		from ury.ury.api.ury_fulfilment_posting_service import is_fulfilment_managed_kot_item
+
+		with patch(
+			"ury.ury.api.ury_fulfilment_posting_service._kot_item_doc",
+			return_value=(frappe._dict({}), "ITEM-1", 1.0),
+		), patch(
+			"ury.ury.api.ury_production_context.resolve_production_context",
+			return_value=None,
+		):
+			self.assertFalse(is_fulfilment_managed_kot_item("KI-1", "BR-1", "CO-1"))
+
+	def test_fails_closed_when_resolution_errors(self):
+		from ury.ury.api.ury_fulfilment_posting_service import is_fulfilment_managed_kot_item
+
+		with patch(
+			"ury.ury.api.ury_fulfilment_posting_service._kot_item_doc",
+			return_value=(frappe._dict({}), "ITEM-1", 1.0),
+		), patch(
+			"ury.ury.api.ury_production_context.resolve_production_context",
+			side_effect=Exception("db down"),
+		):
+			self.assertTrue(is_fulfilment_managed_kot_item("KI-1", "BR-1", "CO-1"))
+
+	def test_fails_closed_when_kot_item_is_unreadable(self):
+		from ury.ury.api.ury_fulfilment_posting_service import is_fulfilment_managed_kot_item
+
+		with patch(
+			"ury.ury.api.ury_fulfilment_posting_service._kot_item_doc",
+			side_effect=Exception("missing"),
+		):
+			self.assertTrue(is_fulfilment_managed_kot_item("KI-1", "BR-1", "CO-1"))

@@ -51,6 +51,15 @@ export interface OrderItem extends MenuItem {
   selectedAddons?: { id: string; name: string; price: number }[];
   uniqueId?: string;
   comment?: string;
+  /**
+   * The real POS Invoice Item child-table row `name` for a line loaded from
+   * an already-saved/printed invoice (via `loadTableOrder`) — undefined for
+   * a line only staged locally and not yet synced to the server. This is
+   * the authoritative selector `reduce_order_item_qty` matches on; `id`/
+   * `uniqueId` are locally-derived keys (item_code + variant/addons) and
+   * must never be sent to that API as the row selector.
+   */
+  invoiceItemName?: string;
 }
 
 export interface PaymentMode {
@@ -643,6 +652,7 @@ export const usePOSStore = create<POSStore>((set, get) => ({
             special_dish: 0 as 0 | 1,
             tax_rate: 0,
             comment: item.comment || '',
+            invoiceItemName: item.name,
           };
           return {
             ...orderItem,

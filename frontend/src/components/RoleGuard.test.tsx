@@ -118,4 +118,23 @@ describe('RoleGuard', () => {
     expect(consoleSpy).toHaveBeenCalled();
     consoleSpy.mockRestore();
   });
+
+  it('denies access and logs an error when the logged-user lookup rejects', async () => {
+    getLoggedUserMock.mockRejectedValueOnce(new Error('session unavailable'));
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(
+      <RoleGuard>
+        <div>Protected</div>
+      </RoleGuard>
+    );
+
+    await waitFor(() => expect(screen.getByText('Access Denied')).toBeInTheDocument());
+    expect(getUserRolesMock).not.toHaveBeenCalled();
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'Failed to check user role',
+      expect.any(Error)
+    );
+    consoleSpy.mockRestore();
+  });
 });

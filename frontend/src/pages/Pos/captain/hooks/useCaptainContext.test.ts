@@ -117,6 +117,33 @@ describe('useCaptainContext', () => {
     )
   })
 
+  it('does not fabricate a role row when the backend returns no roles', async () => {
+    const ctx = buildContext({
+      roles: [],
+      pos_profile: {
+        name: 'Kozhikode POS',
+        transfer_role_permissions: true,
+        role_allowed_for_billing: true,
+        role_restricted_for_table_order: true,
+        remove_items: false,
+        show_image: true,
+        custom_enable_kot_reprint: false,
+        custom_enable_multiple_cashier: false,
+      },
+    })
+    getCaptainContextMock.mockResolvedValueOnce(ctx)
+
+    const { result } = renderHook(() => useCaptainContext())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.user).toEqual({ name: 'waiter@example.com', roles: [] })
+    expect(result.current.posProfile).toMatchObject({
+      role_allowed_for_billing: [],
+      role_restricted_for_table_order: [],
+      transfer_role_permissions: [],
+    })
+  })
+
   it('produces a null posProfile/capabilities but a non-null user when pos_profile is null', async () => {
     const ctx = buildContext({ pos_profile: null })
     getCaptainContextMock.mockResolvedValueOnce(ctx)

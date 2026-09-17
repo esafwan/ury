@@ -183,6 +183,25 @@ describe('CaptainSplitOrderDialog', () => {
     expect(screen.getByText('2')).toBeInTheDocument(); // full qty selected by default
   });
 
+  it('keeps the split action disabled when selecting every item would empty the source bill', async () => {
+    const user = userEvent.setup();
+    render(
+      <CaptainSplitOrderDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        invoiceName="INV-001"
+        items={mockItems}
+        sourceCustomer={mockCustomer}
+        onConfirm={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByText('Chicken Biryani').closest('[role="button"]')!);
+    await user.click(screen.getByText('Butter Naan').closest('[role="button"]')!);
+
+    expect(getButtonByText('Split')).toBeDisabled();
+  });
+
   it('adjusting quantity down keeps the selection valid and recomputes totals', async () => {
     const user = userEvent.setup();
     render(

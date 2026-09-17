@@ -81,6 +81,25 @@ describe('AuthGuard', () => {
     expect(screen.queryByText('Protected')).not.toBeInTheDocument();
   });
 
+  it('denies access when the auth hook reports an error even if a user is present', () => {
+    mockUseAuth.mockReturnValue({
+      user: 'manager@example.com',
+      isLoading: false,
+      error: 'Session expired',
+      isManager: true,
+    });
+
+    render(
+      <AuthGuard>
+        <div>Protected</div>
+      </AuthGuard>
+    );
+
+    expect(screen.getByText('Access Denied')).toBeInTheDocument();
+    expect(screen.getByText('Session expired')).toBeInTheDocument();
+    expect(screen.queryByText('Protected')).not.toBeInTheDocument();
+  });
+
   it('renders children when the user is loaded, no error, and is a manager', () => {
     mockUseAuth.mockReturnValue({
       user: 'manager@example.com',

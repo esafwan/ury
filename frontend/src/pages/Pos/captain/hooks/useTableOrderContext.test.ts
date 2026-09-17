@@ -106,6 +106,21 @@ describe('useTableOrderContext', () => {
     expect(setSelectedTableMock).not.toHaveBeenCalled();
   });
 
+  it('clears the previous table order when the table changes', async () => {
+    const ctx = buildContext();
+    getTableOrderContextMock.mockResolvedValue(ctx);
+
+    const { rerender, result } = renderHook(({ table }) => useTableOrderContext(table), {
+      initialProps: { table: 'T-1' as string | undefined },
+    });
+    await waitFor(() => expect(result.current.context).toEqual(ctx));
+
+    rerender({ table: 'T-2' });
+
+    await waitFor(() => expect(getTableOrderContextMock).toHaveBeenCalledWith('T-2'));
+    expect(clearTableOrderMock).toHaveBeenCalled();
+  });
+
   it('surfaces a fetch error and clears context, without touching pos-store', async () => {
     getTableOrderContextMock.mockRejectedValueOnce(new Error('403 Forbidden'));
 
